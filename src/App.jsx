@@ -1147,6 +1147,39 @@ const DailyPage = () => {
 };
 
 // ━━━ HELPERS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const QUOTES = [
+  "Le voyage de mille lieues commence par un seul pas.",
+  "La discipline est le pont entre les objectifs et les accomplissements.",
+  "Chaque expert a été débutant un jour.",
+  "Le succès n'est pas la clé du bonheur. C'est la passion qui est la clé.",
+  "Commence là où tu es, utilise ce que tu as, fais ce que tu peux.",
+  "Ton futur dépend de ce que tu fais aujourd'hui.",
+  "La persévérance est la mère de la bonne fortune.",
+  "Ce n'est pas la montagne qui nous épuise, mais le caillou dans notre chaussure.",
+  "Le seul endroit où le succès vient avant le travail, c'est dans le dictionnaire.",
+  "Rêve grand, commence petit, agis maintenant.",
+  "Les obstacles sont ces choses effrayantes que tu vois quand tu perds de vue tes objectifs.",
+  "La réussite appartient à ceux qui croient en la beauté de leurs rêves.",
+  "Chaque jour est une nouvelle chance de changer ta vie.",
+  "L'action est le fondement de tout succès.",
+  "Ne compte pas les jours, fais que les jours comptent.",
+  "Il n'y a pas de raccourci vers un endroit qui en vaut la peine.",
+  "La meilleure façon de prédire l'avenir, c'est de le créer.",
+  "La motivation te fait démarrer, l'habitude te fait continuer.",
+  "Les grandes choses ne sont jamais faites par une seule personne.",
+  "Si tu veux quelque chose que tu n'as jamais eu, tu dois faire quelque chose que tu n'as jamais fait.",
+  "Tombe sept fois, relève-toi huit.",
+  "La constance est plus importante que l'intensité.",
+  "Le talent, ça n'existe pas. Le talent c'est d'avoir envie de faire quelque chose.",
+  "On ne fait jamais l'expérience de sa vie future, on l'invente.",
+  "Le plus grand risque est de ne pas en prendre.",
+  "Crois en toi, travaille dur, tout est possible.",
+  "Les petits progrès quotidiens mènent aux grands accomplissements.",
+  "Sois la personne que tu voudrais croiser.",
+  "Le moment présent est le seul moment où tu peux agir.",
+  "Chaque effort que tu fais aujourd'hui plante une graine pour demain.",
+];
+
 // ━━━ DASHBOARD ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const DashboardPage = () => {
   const {nav,completedMs,favorites,treeBranches,treeObjCompleted,streak,todayChecks,getProgress,treeBranchProg,isMsDone,userName,activeDays} = useCtx();
@@ -1169,17 +1202,43 @@ const DashboardPage = () => {
   const activeCareers = CAREER_LIST.filter(c=>getProgress(c.id)>0).sort((a,b)=>getProgress(b.id)-getProgress(a.id));
   const earnedBadges  = BADGES.filter(b=>b.check(ctxB));
   const today = new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
+  const dayOfMonth = new Date().getDate();
+  const dailyQuote = QUOTES[dayOfMonth % QUOTES.length];
+
+  // Weekly chart: last 7 days — filled based on streak
+  const weekDays = Array.from({length:7},(_,i)=>{
+    const d = new Date(); d.setDate(d.getDate()-6+i);
+    const label = d.toLocaleDateString("fr-FR",{weekday:"short"}).slice(0,3);
+    const daysAgo = 6-i;
+    const active = daysAgo < streak;
+    return {label, active};
+  });
+
+  // Prochaine étape — first active career's next incomplete milestone
+  const nextStep = (() => {
+    for(const c of activeCareers) {
+      const idx = c.ms.findIndex((_,j)=>!isMsDone(c.id,j));
+      if(idx>=0) return {career:c, ms:c.ms[idx], idx};
+    }
+    return null;
+  })();
 
   return (
     <div style={{paddingTop:66,minHeight:"100vh"}}>
       <div style={{maxWidth:540,margin:"0 auto",padding:"16px 18px 80px"}}>
 
         {/* Welcome */}
-        <div style={{marginBottom:20}}>
+        <div style={{marginBottom:14}}>
           <h1 style={{fontFamily:T.fd,fontSize:22,fontWeight:800,letterSpacing:"-1px",marginBottom:2}}>
             {userName ? `Bonjour, ${userName} 👋` : "Mon Dashboard"}
           </h1>
           <p style={{color:T.mt,fontSize:11,textTransform:"capitalize"}}>{today}</p>
+        </div>
+
+        {/* Citation du jour */}
+        <div style={{background:`${T.ac}09`,border:`1px solid ${T.ac}22`,borderLeft:`3px solid ${T.ac}`,borderRadius:12,padding:"12px 14px",marginBottom:18}}>
+          <p style={{fontSize:11,color:T.ac,fontWeight:700,letterSpacing:"0.5px",marginBottom:4,textTransform:"uppercase"}}>✦ Inspiration du jour</p>
+          <p style={{fontSize:13,color:T.tx,lineHeight:1.5,fontStyle:"italic"}}>« {dailyQuote} »</p>
         </div>
 
         {/* Hero : streak + score du jour */}
@@ -1224,6 +1283,46 @@ const DashboardPage = () => {
             </div>
           ))}
         </div>
+
+        {/* Graphique hebdomadaire */}
+        <div style={{background:T.sf,border:`1px solid ${T.bd}`,borderRadius:12,padding:"14px",marginBottom:14}}>
+          <h2 style={{fontSize:9,color:T.mt,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:12}}>📅 ACTIVITÉ — 7 DERNIERS JOURS</h2>
+          <div style={{display:"flex",gap:6,alignItems:"flex-end",height:52}}>
+            {weekDays.map((d,i)=>(
+              <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+                <div style={{
+                  width:"100%",borderRadius:4,
+                  background: d.active ? T.ac : T.sb,
+                  height: d.active ? (i===6?44:32+Math.sin(i*0.9)*10) : 8,
+                  transition:"height .4s ease",
+                  boxShadow: d.active ? `0 0 8px ${T.ac}55` : "none"
+                }}/>
+                <span style={{fontSize:8,color:d.active?T.ac:T.mt,fontWeight:d.active?700:400}}>{d.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Prochaine étape */}
+        {nextStep&&(
+          <div style={{background:T.sf,border:`1px solid ${nextStep.career.c}30`,borderLeft:`3px solid ${nextStep.career.c}`,borderRadius:12,padding:"12px 14px",marginBottom:14,cursor:"pointer"}}
+            onClick={()=>nav("career",nextStep.career.id)}>
+            <h2 style={{fontSize:9,color:T.mt,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:8}}>🎯 PROCHAINE ÉTAPE</h2>
+            <div style={{display:"flex",gap:10,alignItems:"center"}}>
+              <div style={{width:36,height:36,borderRadius:9,background:nextStep.career.c+"18",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{nextStep.ms.i}</div>
+              <div style={{flex:1}}>
+                <p style={{fontSize:12,fontWeight:700,fontFamily:T.fd,marginBottom:2}}>{nextStep.ms.p}</p>
+                <p style={{fontSize:11,color:T.mt}}>{nextStep.career.t} · {nextStep.ms.d}</p>
+                <div style={{display:"flex",gap:4,marginTop:4,flexWrap:"wrap"}}>
+                  {(nextStep.ms.tasks||[]).slice(0,2).map((t,i)=>(
+                    <span key={i} className="tag" style={{background:nextStep.career.c+"14",color:nextStep.career.c,fontSize:8}}>{t}</span>
+                  ))}
+                </div>
+              </div>
+              <span style={{color:T.mt,fontSize:13}}>›</span>
+            </div>
+          </div>
+        )}
 
         {/* Badges */}
         <div style={{marginBottom:20}}>
@@ -1286,24 +1385,28 @@ const DashboardPage = () => {
           })}
         </div>
 
-        {/* Arbre de vie */}
+        {/* Branches actives */}
         {treeBranches.length>0&&(
           <div style={{marginBottom:20}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-              <h2 style={{fontSize:9,color:T.mt,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase"}}>🌳 MON ARBRE</h2>
+              <h2 style={{fontSize:9,color:T.mt,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase"}}>🌳 BRANCHES ACTIVES</h2>
               <button className="btn" onClick={()=>nav("tree")} style={{fontSize:9,color:T.gr,background:"none",padding:0,fontWeight:700}}>Voir tout →</button>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
               {treeBranches.map((b,i)=>{
                 const pct = treeBranchProg(b);
+                const totalO = (b.levels||[]).reduce((s,l)=>s+(l.objs||[]).length,0);
                 return (
-                  <div key={b.id} className="fu card" onClick={()=>nav("tree")} style={{background:T.sf,border:`1px solid ${(b.color||T.pu)}1a`,borderRadius:12,padding:"12px",cursor:"pointer",animationDelay:`${i*.04}s`}}>
-                    <div style={{fontSize:22,marginBottom:5}}>{b.icon}</div>
-                    <div style={{fontSize:11,fontWeight:700,fontFamily:T.fd,marginBottom:6,lineHeight:1.2}}>{b.title}</div>
-                    <div style={{height:3,background:T.sb,borderRadius:99,marginBottom:5}}>
-                      <div style={{height:"100%",width:`${pct}%`,background:b.color||T.pu,borderRadius:99}}/>
+                  <div key={b.id} className="fu card" onClick={()=>nav("tree")} style={{background:T.sf,border:`1px solid ${(b.color||T.pu)}2a`,borderRadius:12,padding:"12px",cursor:"pointer",animationDelay:`${i*.04}s`}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+                      <span style={{fontSize:24}}>{b.icon}</span>
+                      <span style={{fontSize:11,fontWeight:800,color:b.color||T.pu}}>{pct}%</span>
                     </div>
-                    <span style={{fontSize:9,color:b.color||T.pu,fontWeight:700}}>{pct}%</span>
+                    <div style={{fontSize:11,fontWeight:700,fontFamily:T.fd,marginBottom:6,lineHeight:1.2}}>{b.title}</div>
+                    <div style={{height:4,background:T.sb,borderRadius:99,marginBottom:4}}>
+                      <div style={{height:"100%",width:`${pct}%`,background:b.color||T.pu,borderRadius:99,boxShadow:pct>0?`0 0 6px ${b.color||T.pu}66`:"none"}}/>
+                    </div>
+                    <span style={{fontSize:8,color:T.mt}}>{totalO} objectif{totalO>1?"s":""}</span>
                   </div>
                 );
               })}

@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from "react";
+import { useState, useEffect, useRef, createContext, useContext } from "react";
 import TreeVisual from "./TreeVisual";
 
 // ━━━ TOKENS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -376,18 +376,14 @@ const LIFE_BRANCHES = {
 // ━━━ CONTEXT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ━━━ BADGES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const BADGES = [
-  {id:"first",    icon:"🌱", name:"Premier pas",    desc:"1 étape terminée",       check:({completedMs})  => Object.values(completedMs).filter(Boolean).length>=1},
-  {id:"ms5",      icon:"⚡", name:"Explorateur",    desc:"5 étapes terminées",     check:({completedMs})  => Object.values(completedMs).filter(Boolean).length>=5},
-  {id:"ms10",     icon:"🚀", name:"Engagé",         desc:"10 étapes terminées",    check:({completedMs})  => Object.values(completedMs).filter(Boolean).length>=10},
-  {id:"streak3",  icon:"🔥", name:"En feu",         desc:"Streak 3 jours",         check:({streak})       => streak>=3},
-  {id:"streak7",  icon:"🏅", name:"Semaine de feu", desc:"Streak 7 jours",         check:({streak})       => streak>=7},
-  {id:"streak30", icon:"💎", name:"Invincible",     desc:"Streak 30 jours",        check:({streak})       => streak>=30},
-  {id:"fav3",     icon:"⭐", name:"Sélectif",       desc:"3 parcours en favoris",  check:({favorites})    => favorites.length>=3},
-  {id:"tree1",    icon:"🌳", name:"Arbre de vie",   desc:"1 branche ajoutée",      check:({treeBranches}) => treeBranches.length>=1},
-  {id:"tree3",    icon:"🌲", name:"Forêt",          desc:"3 branches actives",     check:({treeBranches}) => treeBranches.length>=3},
-  {id:"multi",    icon:"💡", name:"Multi-parcours", desc:"2 parcours en cours",    check:({getProgress})  => CAREER_LIST.filter(c=>getProgress(c.id)>0).length>=2},
-  {id:"half",     icon:"🎯", name:"À mi-chemin",    desc:"50% sur un parcours",    check:({getProgress})  => CAREER_LIST.some(c=>getProgress(c.id)>=50)},
-  {id:"champion", icon:"🏆", name:"Diplômé",        desc:"100% sur un parcours",   check:({getProgress})  => CAREER_LIST.some(c=>getProgress(c.id)===100)},
+  {id:"first",    icon:"✓",  name:"Premier pas",   desc:"1ère action accomplie",              check:({completedMs,todayChecks}) => Object.values(completedMs).filter(Boolean).length>=1||todayChecks>=1},
+  {id:"cap",      icon:"🏁", name:"Cap franchi",   desc:"1er jalon terminé",                  check:({completedMs}) => Object.values(completedMs).filter(Boolean).length>=1},
+  {id:"lancee",   icon:"🔥", name:"Sur la lancée", desc:"3 jalons terminés",                  check:({completedMs}) => Object.values(completedMs).filter(Boolean).length>=3},
+  {id:"momentum", icon:"⭐", name:"Momentum",      desc:"5 jalons terminés",                  check:({completedMs}) => Object.values(completedMs).filter(Boolean).length>=5},
+  {id:"copilot",  icon:"✦",  name:"Co-piloté",     desc:"Partenaire IA activé",               check:() => true},
+  {id:"profil",   icon:"◉",  name:"Profil complet",desc:"Prénom + parcours + branche",        check:({userName,selCareer,treeBranches}) => !!userName&&!!selCareer&&treeBranches.length>0},
+  {id:"explorer", icon:"🗺️", name:"Explorateur",   desc:"3 parcours consultés",               check:({favorites,getProgress}) => CAREER_LIST.filter(c=>favorites.includes(c.id)||getProgress(c.id)>0).length>=3},
+  {id:"cameleon", icon:"🌐", name:"Caméléon",      desc:"2 parcours commencés",               check:({getProgress}) => CAREER_LIST.filter(c=>getProgress(c.id)>0).length>=2},
 ];
 
 const Ctx = createContext(null);
@@ -1471,8 +1467,17 @@ const QUOTES = [
 
 // ━━━ DASHBOARD ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const DashboardPage = () => {
-  const {nav,completedMs,favorites,treeBranches,treeObjCompleted,streak,todayChecks,getProgress,treeBranchProg,isMsDone,userName,activeDays} = useCtx();
-  const ctxB = {completedMs,favorites,treeBranches,streak,todayChecks,getProgress};
+  const {nav,completedMs,favorites,treeBranches,treeObjCompleted,streak,todayChecks,getProgress,treeBranchProg,isMsDone,userName,activeDays,selCareer} = useCtx();
+  const ctxB = {completedMs,favorites,treeBranches,streak,todayChecks,getProgress,userName,selCareer};
+  const prevBadgesRef = useRef(null);
+  useEffect(() => {
+    const earned = BADGES.filter(b=>b.check(ctxB)).map(b=>b.id);
+    if(prevBadgesRef.current !== null) {
+      const newOnes = earned.filter(id=>!prevBadgesRef.current.includes(id));
+      if(newOnes.length > 0) triggerCelebration(window.innerWidth/2, window.innerHeight/2);
+    }
+    prevBadgesRef.current = earned;
+  });
 
   const totalMsDone   = Object.values(completedMs).filter(Boolean).length;
   const totalMs       = CAREER_LIST.reduce((s,c)=>s+c.ms.length,0);

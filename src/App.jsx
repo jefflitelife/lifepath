@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, createContext, useContext } from "react";
+import { useState, useEffect, useRef, useMemo, createContext, useContext } from "react";
 import TreeVisual from "./TreeVisual";
 
 // ━━━ TOKENS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -419,6 +419,9 @@ const saveLS = (s) => { try { localStorage.setItem(LS_KEY, JSON.stringify(s)); }
 
 // ━━━ APP ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export default function LifePath() {
+  const [loading, setLoading] = useState(true);
+  useEffect(() => { const t = setTimeout(() => setLoading(false), 350); return () => clearTimeout(t); }, []);
+
   const [page, setPage] = useState("home");
   const [selCareer, setSelCareer] = useState(null);
   const [selMilestone, setSelMilestone] = useState(null);
@@ -553,6 +556,10 @@ export default function LifePath() {
         .tag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:99px;font-size:10px;font-weight:600;white-space:nowrap}
         input:focus,textarea:focus,select:focus{outline:none;border-color:${T.ac}!important}
       `}</style>
+      {loading&&<div style={{position:"fixed",inset:0,background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:99999}}>
+        <div style={{width:40,height:40,borderRadius:"50%",border:`3px solid ${T.sb}`,borderTopColor:T.ac,animation:"spin .8s linear infinite"}}/>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>}
       <div style={{minHeight:"100vh",background:T.bg}}>
         {notification&&<div style={{position:"fixed",top:12,left:"50%",transform:"translateX(-50%)",zIndex:9999,background:T.sf,border:`1px solid ${T.ac}33`,borderRadius:12,padding:"10px 18px",fontSize:12,color:T.tx,fontWeight:600,boxShadow:"0 8px 32px rgba(0,0,0,.5)",animation:"slideIn .3s ease",maxWidth:340,textAlign:"center"}}>{notification}</div>}
         {!onboardingDone ? <OnboardingFlow/> : (<>
@@ -807,10 +814,10 @@ const HomePage = () => {
 // ━━━ EXPLORE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const ExplorePage = () => {
   const {nav,search,setSearch,cat,setCat,getProgress,favorites,toggleFav,compareA,setCompareA,compareB,setCompareB} = useCtx();
-  let filtered = CAREER_LIST.filter(c => {
+  const filtered = useMemo(() => CAREER_LIST.filter(c => {
     const ms = c.t.toLowerCase().includes(search.toLowerCase()) || c.tag.toLowerCase().includes(search.toLowerCase());
     return ms && (cat==="all" || c.cat===cat);
-  });
+  }), [search, cat]);
 
   const handleCompare = (e, c) => {
     e.stopPropagation();

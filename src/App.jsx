@@ -299,6 +299,22 @@ const LIFE_BRANCHES = {
 };
 
 // ━━━ CONTEXT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━ BADGES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const BADGES = [
+  {id:"first",    icon:"🌱", name:"Premier pas",    desc:"1 étape terminée",       check:({completedMs})  => Object.values(completedMs).filter(Boolean).length>=1},
+  {id:"ms5",      icon:"⚡", name:"Explorateur",    desc:"5 étapes terminées",     check:({completedMs})  => Object.values(completedMs).filter(Boolean).length>=5},
+  {id:"ms10",     icon:"🚀", name:"Engagé",         desc:"10 étapes terminées",    check:({completedMs})  => Object.values(completedMs).filter(Boolean).length>=10},
+  {id:"streak3",  icon:"🔥", name:"En feu",         desc:"Streak 3 jours",         check:({streak})       => streak>=3},
+  {id:"streak7",  icon:"🏅", name:"Semaine de feu", desc:"Streak 7 jours",         check:({streak})       => streak>=7},
+  {id:"streak30", icon:"💎", name:"Invincible",     desc:"Streak 30 jours",        check:({streak})       => streak>=30},
+  {id:"fav3",     icon:"⭐", name:"Sélectif",       desc:"3 parcours en favoris",  check:({favorites})    => favorites.length>=3},
+  {id:"tree1",    icon:"🌳", name:"Arbre de vie",   desc:"1 branche ajoutée",      check:({treeBranches}) => treeBranches.length>=1},
+  {id:"tree3",    icon:"🌲", name:"Forêt",          desc:"3 branches actives",     check:({treeBranches}) => treeBranches.length>=3},
+  {id:"multi",    icon:"💡", name:"Multi-parcours", desc:"2 parcours en cours",    check:({getProgress})  => CAREER_LIST.filter(c=>getProgress(c.id)>0).length>=2},
+  {id:"half",     icon:"🎯", name:"À mi-chemin",    desc:"50% sur un parcours",    check:({getProgress})  => CAREER_LIST.some(c=>getProgress(c.id)>=50)},
+  {id:"champion", icon:"🏆", name:"Diplômé",        desc:"100% sur un parcours",   check:({getProgress})  => CAREER_LIST.some(c=>getProgress(c.id)===100)},
+];
+
 const Ctx = createContext(null);
 const useCtx = () => useContext(Ctx);
 
@@ -352,7 +368,7 @@ export default function LifePath() {
   const notify = (msg) => { setNotification(msg); setTimeout(()=>setNotification(null), 3500); };
   const toggleMs = (cId, mId) => setCompletedMs(p => ({...p,[`${cId}-${mId}`]:!p[`${cId}-${mId}`]}));
   const isMsDone = (cId, mId) => !!completedMs[`${cId}-${mId}`];
-  const getProgress = (cId) => { const c=C[cId]; if(!c) return 0; const d=c.ms.filter(m=>isMsDone(cId,m.i||m.p)).length; return Math.round(d/c.ms.length*100); };
+  const getProgress = (cId) => { const c=C[cId]; if(!c) return 0; const d=c.ms.filter((_,i)=>isMsDone(cId,i)).length; return Math.round(d/c.ms.length*100); };
   const toggleFav  = (id) => setFavorites(p => p.includes(id) ? p.filter(x=>x!==id) : [...p, id]);
   const bumpToday  = () => {
     const today = new Date().toISOString().slice(0,10);
@@ -477,8 +493,8 @@ export default function LifePath() {
             );})()}
           </div>
           <nav style={{display:"flex",gap:2}}>
-            {[{id:"explore",l:"Parcours"},{id:"tree",l:"Mon Arbre"},{id:"daily",l:"Ma Journée"}].map(({id,l})=>(
-              <button key={id} className="btn" onClick={()=>nav(id)} style={{padding:"4px 8px",borderRadius:99,fontSize:10,fontWeight:600,background:page===id?T.ac:"transparent",color:page===id?"#080808":T.mt}}>{l}</button>
+            {[{id:"explore",l:"Parcours"},{id:"dashboard",l:"Stats"},{id:"tree",l:"Arbre"},{id:"daily",l:"Journée"}].map(({id,l})=>(
+              <button key={id} className="btn" onClick={()=>nav(id)} style={{padding:"4px 7px",borderRadius:99,fontSize:10,fontWeight:600,background:page===id?T.ac:"transparent",color:page===id?"#080808":T.mt}}>{l}</button>
             ))}
           </nav>
         </header>}
@@ -491,6 +507,7 @@ export default function LifePath() {
           {page==="treebranch"&&<TreeBranchPage/>}
           {page==="treecatalog"&&<TreeCatalogPage/>}
           {page==="daily"&&<DailyPage/>}
+          {page==="dashboard"&&<DashboardPage/>}
         </div>
       </div>
     </Ctx.Provider>
@@ -517,6 +534,7 @@ const HomePage = () => {
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
           <button className="btn" onClick={()=>nav("explore")} style={{background:T.ac,color:"#080808",borderRadius:14,padding:"15px 24px",fontSize:15,fontWeight:700,boxShadow:`0 4px 24px ${T.acg}`}}>Explorer les 30 parcours →</button>
           <button className="btn" onClick={()=>nav("tree")} style={{background:"rgba(255,255,255,.05)",color:T.mt,borderRadius:14,padding:"13px 24px",fontSize:14,fontWeight:500,border:`1px solid ${T.bd}`}}>🌳 Mon Arbre de Vie</button>
+          <button className="btn" onClick={()=>nav("dashboard")} style={{background:"rgba(255,255,255,.05)",color:T.mt,borderRadius:14,padding:"13px 24px",fontSize:14,fontWeight:500,border:`1px solid ${T.bd}`}}>📊 Mon Dashboard</button>
         </div>
       </div>
       <div style={{borderTop:`1px solid ${T.bd}`,display:"flex",padding:"18px 0 24px",marginTop:32}}>
@@ -970,4 +988,155 @@ const DailyPage = () => {
 };
 
 // ━━━ HELPERS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━ DASHBOARD ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const DashboardPage = () => {
+  const {nav,completedMs,favorites,treeBranches,streak,todayChecks,getProgress,treeBranchProg,isMsDone} = useCtx();
+  const ctxB = {completedMs,favorites,treeBranches,streak,todayChecks,getProgress};
+
+  const totalMsDone = Object.values(completedMs).filter(Boolean).length;
+  const totalMs     = CAREER_LIST.reduce((s,c)=>s+c.ms.length,0);
+
+  const unlockedSkills = new Set();
+  Object.entries(completedMs).forEach(([key,done])=>{
+    if(!done) return;
+    const li=key.lastIndexOf("-"); const cId=key.slice(0,li); const mIdx=parseInt(key.slice(li+1));
+    const career=C[cId]; if(career&&career.ms[mIdx]) (career.ms[mIdx].sku||[]).forEach(s=>unlockedSkills.add(s));
+  });
+
+  const activeCareers = CAREER_LIST.filter(c=>getProgress(c.id)>0).sort((a,b)=>getProgress(b.id)-getProgress(a.id));
+  const earnedCount   = BADGES.filter(b=>b.check(ctxB)).length;
+  const today = new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
+
+  return (
+    <div style={{paddingTop:66,minHeight:"100vh"}}>
+      <div style={{maxWidth:540,margin:"0 auto",padding:"16px 18px 80px"}}>
+
+        {/* Header */}
+        <h1 style={{fontFamily:T.fd,fontSize:22,fontWeight:800,letterSpacing:"-1px",marginBottom:2}}>Mon Dashboard</h1>
+        <p style={{color:T.mt,fontSize:11,marginBottom:18,textTransform:"capitalize"}}>{today}</p>
+
+        {/* 4 KPI cards */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:20}}>
+          {[
+            {v:streak,                      l:"Streak",   icon:"🔥", col:streak>=7?T.ac:streak>=3?T.or:T.mt},
+            {v:`${totalMsDone}/${totalMs}`,  l:"Étapes",  icon:"📈", col:T.bl},
+            {v:unlockedSkills.size,          l:"Skills",  icon:"⭐", col:T.pu},
+            {v:treeBranches.length,          l:"Branches",icon:"🌳", col:T.gr},
+          ].map(({v,l,icon,col},i)=>(
+            <div key={i} style={{background:T.sf,border:`1px solid ${T.bd}`,borderRadius:12,padding:"10px 6px",textAlign:"center"}}>
+              <div style={{fontSize:13,marginBottom:3}}>{icon}</div>
+              <div style={{fontFamily:T.fd,fontSize:typeof v==="string"?10:14,fontWeight:800,color:col,lineHeight:1}}>{v}</div>
+              <div style={{fontSize:8,color:T.mt,marginTop:3}}>{l}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Badges */}
+        <div style={{marginBottom:20}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <h2 style={{fontSize:9,color:T.mt,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase"}}>🏅 BADGES</h2>
+            <span style={{fontSize:9,color:T.ac,fontWeight:800}}>{earnedCount}/{BADGES.length} débloqués</span>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6}}>
+            {BADGES.map((b,i)=>{
+              const earned = b.check(ctxB);
+              return (
+                <div key={b.id} className={earned?"fu":""} style={{background:earned?`${T.ac}09`:T.sf,border:`1px solid ${earned?T.ac+"30":T.bd}`,borderRadius:10,padding:"10px 8px",textAlign:"center",opacity:earned?1:.35,transition:"opacity .2s",animationDelay:`${i*.03}s`}}>
+                  <div style={{fontSize:20,marginBottom:4,filter:earned?"none":"grayscale(100%)"}}>{b.icon}</div>
+                  <div style={{fontSize:9,fontWeight:700,color:earned?T.ac:T.mt,marginBottom:2}}>{b.name}</div>
+                  <div style={{fontSize:8,color:T.mt,lineHeight:1.3}}>{b.desc}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Parcours en cours */}
+        <div style={{marginBottom:20}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <h2 style={{fontSize:9,color:T.mt,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase"}}>📚 MES PARCOURS</h2>
+            {activeCareers.length>0&&<button className="btn" onClick={()=>nav("explore")} style={{fontSize:9,color:T.ac,background:"none",padding:0,fontWeight:700}}>+ Explorer</button>}
+          </div>
+          {activeCareers.length===0 ? (
+            <div style={{background:T.sf,border:`1px dashed ${T.bd}`,borderRadius:12,padding:"22px",textAlign:"center"}}>
+              <p style={{fontSize:12,color:T.mt,marginBottom:10}}>Aucun parcours commencé</p>
+              <button className="btn" onClick={()=>nav("explore")} style={{background:T.ac,color:"#080808",borderRadius:8,padding:"8px 16px",fontSize:12,fontWeight:700}}>Explorer les 30 parcours →</button>
+            </div>
+          ) : activeCareers.map((c,i)=>{
+            const p = getProgress(c.id);
+            const doneCount = c.ms.filter((_,j)=>isMsDone(c.id,j)).length;
+            const curMsIdx  = c.ms.findIndex((_,j)=>!isMsDone(c.id,j)&&(j===0||c.ms.slice(0,j).every((_,k)=>isMsDone(c.id,k))));
+            const curMs     = curMsIdx>=0 ? c.ms[curMsIdx] : null;
+            return (
+              <div key={c.id} className="fu card" onClick={()=>nav("career",c.id)} style={{background:T.sf,border:`1px solid ${T.bd}`,borderRadius:12,padding:"12px",marginBottom:6,cursor:"pointer",borderLeft:`3px solid ${c.c}44`,animationDelay:`${i*.04}s`}}>
+                <div style={{display:"flex",gap:9,alignItems:"center"}}>
+                  <div style={{width:36,height:36,borderRadius:9,background:c.c+"14",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0}}>{c.e}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
+                      <span style={{fontFamily:T.fd,fontSize:12,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"70%"}}>{c.t}</span>
+                      <span style={{fontSize:11,fontWeight:800,color:p===100?T.gr:c.c,flexShrink:0}}>{p===100?"✓ 100%":`${p}%`}</span>
+                    </div>
+                    <div style={{height:3,background:T.sb,borderRadius:99,marginBottom:4}}>
+                      <div style={{height:"100%",width:`${p}%`,background:p===100?T.gr:c.c,borderRadius:99,transition:"width .4s"}}/>
+                    </div>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                      <span style={{fontSize:9,color:T.mt}}>{doneCount}/{c.ms.length} étapes</span>
+                      {curMs&&p<100&&<span className="tag" style={{background:c.c+"14",color:c.c,fontSize:8}}>{curMs.i} {curMs.p}</span>}
+                      {p===100&&<span className="tag" style={{background:T.grd,color:T.gr,fontSize:8}}>Terminé ✓</span>}
+                    </div>
+                  </div>
+                  <span style={{color:T.mt,fontSize:13,flexShrink:0}}>›</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Arbre de vie */}
+        {treeBranches.length>0&&(
+          <div style={{marginBottom:20}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <h2 style={{fontSize:9,color:T.mt,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase"}}>🌳 MON ARBRE</h2>
+              <button className="btn" onClick={()=>nav("tree")} style={{fontSize:9,color:T.gr,background:"none",padding:0,fontWeight:700}}>Voir tout →</button>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+              {treeBranches.map((b,i)=>{
+                const pct = treeBranchProg(b);
+                return (
+                  <div key={b.id} className="fu card" onClick={()=>nav("tree")} style={{background:T.sf,border:`1px solid ${(b.color||T.pu)}1a`,borderRadius:12,padding:"12px",cursor:"pointer",animationDelay:`${i*.04}s`}}>
+                    <div style={{fontSize:22,marginBottom:5}}>{b.icon}</div>
+                    <div style={{fontSize:11,fontWeight:700,fontFamily:T.fd,marginBottom:6,lineHeight:1.2}}>{b.title}</div>
+                    <div style={{height:3,background:T.sb,borderRadius:99,marginBottom:5}}>
+                      <div style={{height:"100%",width:`${pct}%`,background:b.color||T.pu,borderRadius:99}}/>
+                    </div>
+                    <span style={{fontSize:9,color:b.color||T.pu,fontWeight:700}}>{pct}%</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Barre progression globale */}
+        {totalMsDone>0&&(
+          <div style={{background:T.sf,border:`1px solid ${T.bd}`,borderRadius:12,padding:"14px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <h2 style={{fontSize:9,color:T.mt,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase"}}>⚡ PROGRESSION GLOBALE</h2>
+              <span style={{fontSize:11,color:T.ac,fontWeight:800}}>{Math.round(totalMsDone/totalMs*100)}%</span>
+            </div>
+            <div style={{height:6,background:T.sb,borderRadius:99}}>
+              <div style={{height:"100%",width:`${Math.round(totalMsDone/totalMs*100)}%`,background:`linear-gradient(90deg,${T.ac}88,${T.ac})`,borderRadius:99,transition:"width .4s"}}/>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
+              <span style={{fontSize:9,color:T.mt}}>{totalMsDone} étape{totalMsDone>1?"s":""} terminée{totalMsDone>1?"s":""}</span>
+              <span style={{fontSize:9,color:T.mt}}>{totalMs-totalMsDone} restante{totalMs-totalMsDone>1?"s":""}</span>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+};
+
 const Sec = ({t, children}) => <div style={{marginBottom:14}}><h2 style={{fontSize:9,color:T.mt,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:6}}>{t}</h2>{children}</div>;

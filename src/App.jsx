@@ -268,19 +268,24 @@ const LIFE_BRANCHES = {
 const Ctx = createContext(null);
 const useCtx = () => useContext(Ctx);
 
+// ━━━ PERSISTENCE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const LS_KEY = "lifepath_v1";
+const loadLS = () => { try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch { return {}; } };
+const saveLS = (s) => { try { localStorage.setItem(LS_KEY, JSON.stringify(s)); } catch {} };
+
 // ━━━ APP ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export default function LifePath() {
   const [page, setPage] = useState("home");
   const [selCareer, setSelCareer] = useState(null);
   const [selMilestone, setSelMilestone] = useState(null);
-  const [completedMs, setCompletedMs] = useState({});
+  const [completedMs, setCompletedMs] = useState(() => loadLS().completedMs || {});
   const [search, setSearch] = useState("");
   const [cat, setCat] = useState("all");
-  const [favorites, setFavorites] = useState([]);
+  const [favorites, setFavorites] = useState(() => loadLS().favorites || []);
   // Life tree
-  const [treeBranches, setTreeBranches] = useState([]);
+  const [treeBranches, setTreeBranches] = useState(() => loadLS().treeBranches || []);
   const [selBranch, setSelBranch] = useState(null);
-  const [treeObjCompleted, setTreeObjCompleted] = useState({});
+  const [treeObjCompleted, setTreeObjCompleted] = useState(() => loadLS().treeObjCompleted || {});
   const [notification, setNotification] = useState(null);
 
   const nav = (p, c, m) => { if(c!==undefined) setSelCareer(c); if(m!==undefined) setSelMilestone(m); setPage(p); };
@@ -289,6 +294,8 @@ export default function LifePath() {
   const isMsDone = (cId, mId) => !!completedMs[`${cId}-${mId}`];
   const getProgress = (cId) => { const c=C[cId]; if(!c) return 0; const d=c.ms.filter(m=>isMsDone(cId,m.i||m.p)).length; return Math.round(d/c.ms.length*100); };
   const toggleFav = (id) => setFavorites(p => p.includes(id) ? p.filter(x=>x!==id) : [...p, id]);
+
+  useEffect(() => { saveLS({ completedMs, favorites, treeBranches, treeObjCompleted }); }, [completedMs, favorites, treeBranches, treeObjCompleted]);
 
   // Tree helpers
   const toggleTreeObj = (branchId, objText) => {
@@ -727,9 +734,9 @@ const TreeBranchPage = () => {
 
 // ━━━ DAILY PAGE (simplified) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const DailyPage = () => {
-  const {nav,selCareer,treeBranches,treeBranchProg} = useCtx();
+  const {nav,selCareer,treeBranches,isMsDone,isTreeLevelUnlocked} = useCtx();
   const career = selCareer ? C[selCareer] : null;
-  const currentMs = career ? career.ms[0] : null;
+  const currentMs = career ? (career.ms.find((_,i) => !isMsDone(career.id,i) && career.ms.slice(0,i).every((_,j) => isMsDone(career.id,j))) || career.ms[0]) : null;
   return (
     <div style={{paddingTop:66,minHeight:"100vh"}}>
       <div style={{maxWidth:540,margin:"0 auto",padding:"16px 18px 80px"}}>
@@ -743,10 +750,9 @@ const DailyPage = () => {
 
         {/* Tree branches daily view */}
         {treeBranches.map(b => {
-          const currentLevel = (b.levels||[]).find((_,i)=>{
-            const unlocked = i===0 || (()=>{const prev=b.levels[i-1];const d=(prev.objs||[]).filter(o=>false).length;return d/(prev.objs||[]).length>=0.75;})();
-            return unlocked;
-          }) || (b.levels||[])[0];
+          let curIdx = 0;
+          (b.levels||[]).forEach((_,i) => { if(isTreeLevelUnlocked(b,i)) curIdx = i; });
+          const currentLevel = (b.levels||[])[curIdx];
           if(!currentLevel) return null;
           const firstUndone = (currentLevel.objs||[]).slice(0,3);
           return (

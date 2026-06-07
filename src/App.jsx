@@ -162,6 +162,40 @@ supplychain:{id:"supplychain",e:"📦",t:"Responsable Logistique / Supply Chain"
 
 const CAREER_LIST = Object.values(C);
 
+// ━━━ HORIZON DATA (ai=risque IA/100, gr=croissance marché/100) ━━━━━━━━━━━━
+const HORIZON = {
+  fullstack:      {ai:45,gr:75,th:["Copilot remplace le code basique","Low-code en progression"],                                   dr:["Demande mondiale en hausse","IA augmente la productivité","Full-stack rare"],          t:{y5:"Dev augmenté IA, focus archi",y10:"Spécialiste ML ou sécurité",y20:"Architecte systèmes intelligents"},          vd:"Métier durable si montée en compétences IA. Le dev qui maîtrise les LLMs sera 10× plus productif — et irremplaçable."},
+  uxdesign:       {ai:35,gr:70,th:["Génération d'UI par IA","Templates automatisés Canva/Figma"],                                   dr:["Empathie utilisateur irremplaçable","Croissance des produits digitaux","UX stratégique"], t:{y5:"Designer + prompt engineer",y10:"Stratège UX data-driven",y20:"DA expériences humain-machine"},              vd:"L'IA génère des wireframes, pas de l'empathie. La recherche utilisateur et la vision produit restent profondément humaines."},
+  dataanalyst:    {ai:55,gr:80,th:["BI automatisée par IA","SQL basique remplacé par ChatGPT"],                                    dr:["Explosion des données","Décisions data-driven partout","Forte demande RH"],             t:{y5:"Analyste augmenté par LLM",y10:"Expert data sectoriel",y20:"Chief Data Officer"},                                  vd:"L'analyse automatique monte mais l'interprétation business et la stratégie data restent humaines. Spécialisation = clé."},
+  entrepreneur:   {ai:10,gr:90,th:["Concurrence accrue via outils IA","Saturation des marchés no-code"],                          dr:["IA réduit le coût de création","Marchés globaux accessibles","Financement seed disponible"],t:{y5:"Solopreneur IA-powered",y10:"Scale-up lean team",y20:"Fondateur série B+"},                               vd:"L'IA est un accélérateur massif. Jamais aussi facile de créer un produit, jamais aussi compétitif. L'exécution prime."},
+  infirmier:      {ai:8, gr:85,th:["Pénurie de vocations","Burn-out et turn-over élevés"],                                        dr:["Vieillissement de la population","Besoins en hausse constante","Revalorisation Ségur"],  t:{y5:"IDE avec outils IA de diagnostic",y10:"Spécialiste augmenté",y20:"Coordinateur soins tech-assisted"},            vd:"Les soins humains sont irremplaçables. L'IA assiste mais ne remplace pas la relation patient. Débouchés excellents sur 20 ans."},
+  comptable:      {ai:65,gr:40,th:["Automatisation de la saisie comptable","IA fiscale avancée (Pennylane)"],                     dr:["Expertise conseil non automatisable","Réglementation croissante","Label EC = confiance"],  t:{y5:"Comptable conseil, moins de saisie",y10:"Expert fiscal stratégique",y20:"CFO ou cabinet boutique"},             vd:"La saisie disparaît. L'expertise fiscale et l'accompagnement stratégique restent. Repositionnement vers le conseil urgent."},
+  commercial:     {ai:20,gr:75,th:["Automatisation du cold emailing","CRM IA qui qualifie les leads"],                            dr:["Négociation humaine décisive","Salaire lié à la performance","Tous secteurs recrutent"],   t:{y5:"Commercial augmenté par IA",y10:"Account manager stratégique",y20:"Directeur commercial"},                        vd:"L'IA prospecte, l'humain convainc. Les commerciaux qui maîtrisent les outils IA seront 3× plus efficaces et mieux payés."},
+  marketing:      {ai:50,gr:65,th:["Contenu IA généré en masse","SEO automatisé dévalue le générique"],                          dr:["Personal branding irremplaçable","Créativité humaine premium","Stratégie multi-canal"],   t:{y5:"Content manager + prompt expert",y10:"Stratège growth senior",y20:"CMO ou fondateur média"},                      vd:"Le contenu générique sera produit par l'IA. La créativité, le brand voice et la stratégie restent humains et premium."},
+  architecte:     {ai:25,gr:60,th:["Rendu IA ultra-réaliste","BIM partiellement automatisé"],                                    dr:["Vision créative unique","Réglementation = humain","Transition écologique"],               t:{y5:"Architecte IA-augmenté",y10:"Spécialiste durable ou patrimonial",y20:"Urbaniste ou archi systèmes"},             vd:"L'IA accélère les rendus, pas la conception. La réglementation, la relation client et la créativité restent profondément humaines."},
+  avocat:         {ai:40,gr:55,th:["LegalTech automatise les actes simples","IA de rédaction contractuelle"],                    dr:["Justice = humain par essence","Litiges en hausse","Spécialisation protège"],               t:{y5:"Avocat augmenté par IA",y10:"Expert niche juridique reconnu",y20:"Associé senior ou magistrat"},                  vd:"Les actes standards sont automatisables. Le conseil stratégique, la plaidoirie et les affaires complexes restent humains."},
+  cybersecurite:  {ai:15,gr:95,th:["Attaques IA de plus en plus sophistiquées","Faux positifs SIEM en hausse"],                  dr:["Cyberattaques en explosion","Pénurie mondiale d'experts","Réglementation NIS2"],          t:{y5:"Expert red/blue team IA-augmenté",y10:"CISO ou expert sectoriel",y20:"Architecte sécurité systèmes critiques"},  vd:"Le domaine le plus résistant à l'IA — l'IA attaque autant qu'elle défend. Pénurie mondiale critique pour 20 ans."},
+  productmanager: {ai:30,gr:80,th:["Roadmapping IA partiel","No-code réduit besoin de PM technique"],                            dr:["Tech croissante = PM indispensable","Salaires premium","Rôle décisionnel central"],        t:{y5:"PM augmenté par analytics IA",y10:"VP Product ou CPO",y20:"Founder ou C-suite"},                                  vd:"Le PM qui comprend l'IA sera CPO. La vision produit, l'empathie et la décision stratégique restent irremplaçables."},
+  devops:         {ai:35,gr:85,th:["IaC partiellement automatisée","Cloud providers abstraient la complexité"],                   dr:["Cloud en croissance constante","SRE indispensable à l'échelle","Pénurie forte"],           t:{y5:"Platform engineer IA-augmenté",y10:"Architecte cloud senior",y20:"VP Infrastructure ou CTO"},                    vd:"L'automatisation infra accélère mais crée de nouveaux besoins. DevOps reste une compétence rare et très bien payée."},
+  datascientist:  {ai:40,gr:90,th:["AutoML réduit le besoin de code ML","LLMs remplacent des pipelines custom"],                  dr:["IA en production = ML Engineers","Explosion des usages IA","Top rémunération marché"],    t:{y5:"ML Engineer + LLM specialist",y10:"AI Lead ou Research Engineer",y20:"Chief AI Officer"},                        vd:"Le data scientist notebooks est menacé. Celui qui déploie l'IA en production et comprend les LLMs est en or massif."},
+  devmobile:      {ai:40,gr:70,th:["PWA réduit le besoin d'apps natives","Génération UI par IA"],                                 dr:["Smartphone = premier écran","Apps métier en croissance","Demande soutenue"],               t:{y5:"Dev mobile + React Native senior",y10:"Lead mobile ou CTO mobile",y20:"Architecte expériences mobiles"},          vd:"Le mobile reste le premier écran. Les développeurs natifs restent rares et bien payés malgré le cross-platform."},
+  psychologue:    {ai:12,gr:70,th:["Apps thérapeutiques IA grand public","Télé-thérapie low-cost concurrente"],                   dr:["Crise santé mentale mondiale","Remboursement renforcé","Relation humaine irremplaçable"],   t:{y5:"Psy avec outils IA diagnostics",y10:"Spécialiste clinique reconnu",y20:"Superviseur ou chercheur"},               vd:"La relation thérapeutique est profondément humaine. La demande explose avec la crise de santé mentale mondiale."},
+  kine:           {ai:5, gr:80,th:["Rééducation assistée par robot","Télé-kiné limitée en efficacité"],                          dr:["Vieillissement population","Sport et bien-être en hausse","Libéral = revenus élevés"],     t:{y5:"Kiné avec IA diagnostic mouvement",y10:"Spécialiste sport ou neuro",y20:"Entrepreneur en santé ou clinique"},   vd:"Le toucher thérapeutique est irremplaçable. Pénurie structurelle en France. Revenus libéraux parmi les meilleurs santé."},
+  aidesoignant:   {ai:5, gr:85,th:["Robots d'assistance en EHPAD","Conditions de travail difficiles"],                           dr:["Vieillissement accéléré","Pénurie structurelle","Revalorisation salariale"],               t:{y5:"AS avec tablettes suivi IA",y10:"AS coordinateur de soins",y20:"Cadre de proximité ou IDE"},                     vd:"Le soin humain et la présence sont irremplaçables. Pénurie critique garantit l'emploi. Passerelle vers IDE très valorisée."},
+  electricien:    {ai:3, gr:90,th:["Kits DIY smart home réducteurs","Formation accélérée en masse"],                             dr:["Pénurie historique d'artisans","Rénovation énergétique obligatoire","Revenus libéraux élevés"],t:{y5:"Artisan spécialisé smart home",y10:"Chef d'entreprise BTP",y20:"Patron PME ou franchise"},                      vd:"Impossible à délocaliser, impossible à automatiser sur chantier. Pénurie structurelle et revenus libéraux qui s'envolent."},
+  boulanger:      {ai:10,gr:65,th:["Grande distribution low-cost","Coûts matières premières volatils"],                          dr:["Artisanat premium en forte hausse","Franchise accessible","Tradition française valorisée"],t:{y5:"Artisan avec présence digitale",y10:"Propriétaire de franchise",y20:"Franchise multi-sites ou marque"},           vd:"L'artisanat alimentaire de qualité résiste. La boulangerie premium et la franchise offrent un vrai potentiel de revenus."},
+  coiffeur:       {ai:2, gr:55,th:["Pression prix discount","Barbiers indépendants prolifèrent"],                                dr:["Bien-être en croissance","Clientèle fidèle","Faibles coûts d'installation"],               t:{y5:"Salon spécialisé (barbier, coloriste)",y10:"Propriétaire salon premium",y20:"Franchise ou académie de coiffure"},  vd:"Service physique irremplaçable. Le marché premium et les barbiers modernes connaissent une vraie croissance durable."},
+  prof:           {ai:20,gr:45,th:["IA pédagogique personnalisée","Plateformes MOOCs gratuites"],                                dr:["Fonctionnaire = stabilité totale","Revalorisation salariale","Impact sociétal fort"],       t:{y5:"Enseignant avec outils IA adaptatifs",y10:"Directeur ou formateur",y20:"Inspecteur ou cadre éducatif"},           vd:"L'IA transforme la pédagogie mais pas le rôle social de l'enseignant. Stabilité, sens et retraite garantis."},
+  agentimmo:      {ai:35,gr:55,th:["Plateformes vente entre particuliers","IA d'estimation automatique"],                        dr:["Marché immobilier actif","Commissions élevées","Réseau terrain irremplaçable"],            t:{y5:"Agent digital-first hybride",y10:"Directeur agence",y20:"Promoteur ou investisseur immobilier"},                  vd:"L'IA estime, pas la confiance. La négociation et la relation client restent décisives. Les top performers gagnent très bien."},
+  photographe:    {ai:55,gr:50,th:["Génération d'images IA (Midjourney)","Stock photos IA gratuites"],                          dr:["Événementiel irremplaçable","Personal branding demande","Vidéo corporate en hausse"],      t:{y5:"Créatif IA-augmenté",y10:"Directeur artistique visuel",y20:"Studio créatif ou agence"},                           vd:"La photo stock est morte face à l'IA. L'événementiel, le corporate et la direction artistique restent humains et rentables."},
+  redacteur:      {ai:70,gr:40,th:["GPT génère des articles en masse","SEO automatisé dévalue le contenu","Tarifs en chute"],   dr:["Expertise sectorielle rare","Journalisme d'investigation","Personal brand unique"],       t:{y5:"Éditeur et correcteur contenu IA",y10:"Expert contenu sectoriel",y20:"Journaliste ou auteur reconnu"},            vd:"Le contenu générique est automatisé. L'expertise sectorielle, la voix unique et l'investigation restent premium et rares."},
+  graphiste:      {ai:50,gr:55,th:["Midjourney/DALL-E pour visuels","Canva IA pour templates rapides"],                         dr:["Identité visuelle = stratégie","Direction artistique humaine","Branding premium en hausse"],t:{y5:"Graphiste + prompt designer",y10:"Directeur artistique",y20:"Directeur créatif d'agence"},                       vd:"Les visuels génériques sont automatisés. La direction artistique et l'identité visuelle stratégique restent humains et premium."},
+  consultant:     {ai:30,gr:60,th:["IA analyse et synthèse de documents","Outils de stratégie semi-automatisés"],               dr:["Réseau et réputation non copiables","Transformation digitale forte","Conseil = confiance"],  t:{y5:"Consultant augmenté par IA",y10:"Manager senior ou Partner",y20:"Associé ou fondateur boutique"},               vd:"L'IA génère des slides, pas de la confiance. Le réseau, le jugement et la relation client sont le cœur indélogeable du métier."},
+  trader:         {ai:60,gr:50,th:["Algorithmes HFT dominent le marché","IA quantitative toujours plus performante"],           dr:["Finance = innovation constante","Marchés globaux","Bonus exceptionnels possibles"],        t:{y5:"Trader quantitatif + IA",y10:"Portfolio manager spécialisé",y20:"Hedge fund manager ou directeur"},              vd:"Le trading algorithmique domine les marchés liquides. Les humains restent indispensables en gestion macro et relation client."},
+  maintenance:    {ai:15,gr:75,th:["Maintenance prédictive IA","Robots d'inspection industrielle"],                             dr:["Industrie 4.0 demande des techniciens","Pénurie structurelle","Salaires en forte hausse"],  t:{y5:"Technicien GMAO IA-assisté",y10:"Responsable maintenance",y20:"Directeur technique ou DSI industriel"},          vd:"La maintenance physique est irremplaçable. L'IA prédit les pannes mais les techniciens les réparent. Pénurie garantit l'emploi."},
+  supplychain:    {ai:45,gr:70,th:["Automatisation des entrepôts","IA prévision de la demande"],                                dr:["E-commerce en explosion","Supply chains critiques post-Covid","Digitalisation accélérée"],  t:{y5:"Manager supply chain digitale",y10:"Directeur logistique",y20:"VP Operations ou COO"},                            vd:"La supply chain se digitalise mais le management humain reste critique. E-commerce et crises logistiques créent une forte demande."}
+};
+
 // ━━━ LIFE TREE BRANCHES (pre-built with questionnaire) ━━━━━━━━━━━━━━━━━━━━
 const LIFE_BRANCHES = {
   arret_tabac:{id:"arret_tabac",icon:"🚭",title:"Arrêter de fumer",color:"#EF4444",desc:"Se libérer du tabac.",
@@ -455,6 +489,83 @@ const ExplorePage = () => {
   );
 };
 
+// ━━━ HORIZON CARD ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const HorizonCard = ({c}) => {
+  const hz = HORIZON[c.id];
+  if(!hz) return null;
+  const aiCol = hz.ai<=30?T.gr:hz.ai<=60?T.yl:T.rd;
+  const grCol = hz.gr>=70?T.gr:hz.gr>=50?T.yl:T.rd;
+  const ssCol = c.ss>=80?T.gr:c.ss>=60?T.yl:T.rd;
+  return (
+    <div style={{background:T.sf,border:`1px solid ${T.bd}`,borderRadius:16,padding:"16px",marginBottom:14}}>
+      <h2 style={{fontSize:9,color:T.mt,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:12}}>🔭 HORIZON 2030–2045</h2>
+
+      {/* Score sécurité + jauges */}
+      <div style={{display:"flex",gap:10,marginBottom:14,alignItems:"stretch"}}>
+        <div style={{background:ssCol+"12",border:`1px solid ${ssCol}28`,borderRadius:12,padding:"12px 8px",textAlign:"center",minWidth:70,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+          <div style={{fontFamily:T.fd,fontSize:40,fontWeight:900,color:ssCol,lineHeight:1}}>{c.ss}</div>
+          <div style={{fontSize:7,color:ssCol,fontWeight:800,letterSpacing:".8px",marginTop:5,textTransform:"uppercase",lineHeight:1.3}}>Score<br/>sécurité</div>
+        </div>
+        <div style={{flex:1,display:"flex",flexDirection:"column",gap:10,justifyContent:"center"}}>
+          <div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+              <span style={{fontSize:9,color:T.mt,fontWeight:600}}>⚡ Risque IA</span>
+              <span style={{fontSize:10,color:aiCol,fontWeight:800}}>{hz.ai}<span style={{fontSize:7,opacity:.7}}>/100</span></span>
+            </div>
+            <div style={{height:7,background:T.sb,borderRadius:99,overflow:"hidden"}}>
+              <div style={{height:"100%",width:`${hz.ai}%`,background:`linear-gradient(90deg,${aiCol}88,${aiCol})`,borderRadius:99}}/>
+            </div>
+          </div>
+          <div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+              <span style={{fontSize:9,color:T.mt,fontWeight:600}}>📈 Croissance marché</span>
+              <span style={{fontSize:10,color:grCol,fontWeight:800}}>{hz.gr}<span style={{fontSize:7,opacity:.7}}>/100</span></span>
+            </div>
+            <div style={{height:7,background:T.sb,borderRadius:99,overflow:"hidden"}}>
+              <div style={{height:"100%",width:`${hz.gr}%`,background:`linear-gradient(90deg,${grCol}88,${grCol})`,borderRadius:99}}/>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Timeline */}
+      <div style={{marginBottom:12}}>
+        <div style={{fontSize:9,color:T.mt,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:7}}>🗓 PROJECTIONS</div>
+        <div style={{display:"flex",gap:5}}>
+          {[["2030",hz.t.y5,c.c],["2035",hz.t.y10,T.bl],["2045",hz.t.y20,T.pu]].map(([yr,txt,col])=>(
+            <div key={yr} style={{flex:1,background:col+"0d",border:`1px solid ${col}22`,borderRadius:8,padding:"8px 7px"}}>
+              <div style={{fontSize:7,color:col,fontWeight:800,letterSpacing:".5px",marginBottom:4}}>{yr} ▸</div>
+              <div style={{fontSize:9,color:T.tx,lineHeight:1.45}}>{txt}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Menaces + Atouts */}
+      <div style={{display:"flex",flexDirection:"column",gap:9,marginBottom:12}}>
+        <div>
+          <div style={{fontSize:9,color:T.mt,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:5}}>⚠️ MENACES</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+            {hz.th.map((t,i)=><span key={i} className="tag" style={{background:"rgba(255,77,77,.08)",border:"1px solid rgba(255,77,77,.2)",color:T.rd,fontSize:9}}>{t}</span>)}
+          </div>
+        </div>
+        <div>
+          <div style={{fontSize:9,color:T.mt,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:5}}>✅ ATOUTS</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+            {hz.dr.map((d,i)=><span key={i} className="tag" style={{background:"rgba(34,197,94,.08)",border:`1px solid ${T.gr}22`,color:T.gr,fontSize:9}}>{d}</span>)}
+          </div>
+        </div>
+      </div>
+
+      {/* Verdict */}
+      <div style={{background:T.sfh,border:`1px solid ${c.c}22`,borderRadius:10,padding:"11px 12px"}}>
+        <div style={{fontSize:8,color:c.c,fontWeight:800,letterSpacing:"1px",textTransform:"uppercase",marginBottom:5}}>💬 VERDICT</div>
+        <p style={{fontSize:11,color:T.tx,lineHeight:1.65,margin:0}}>{hz.vd}</p>
+      </div>
+    </div>
+  );
+};
+
 // ━━━ CAREER PAGE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const CareerPage = () => {
   const {nav,selCareer,isMsDone,getProgress} = useCtx();
@@ -480,6 +591,7 @@ const CareerPage = () => {
             {[["Junior",c.sal.j],["Mid",c.sal.m],["Senior",c.sal.s]].map(([l,v])=><div key={l} style={{flex:1,background:"rgba(255,255,255,.03)",borderRadius:6,padding:"6px",textAlign:"center"}}><div style={{fontSize:8,color:T.mt,textTransform:"uppercase"}}>{l}</div><div style={{fontSize:10,fontWeight:700}}>{v}</div></div>)}
           </div>
         </div>
+        <HorizonCard c={c}/>
         {/* Milestones */}
         <div style={{position:"relative"}}>
           <div style={{position:"absolute",left:12,top:8,bottom:8,width:1,background:T.bd}}/>

@@ -501,10 +501,11 @@ export default function LifePath() {
                 </div>
               );})()}
             </div>
-            <nav style={{display:"flex",gap:2}}>
+            <nav style={{display:"flex",gap:2,alignItems:"center"}}>
               {[{id:"explore",l:"Parcours"},{id:"dashboard",l:"Stats"},{id:"tree",l:"Arbre"},{id:"daily",l:"Journée"}].map(({id,l})=>(
                 <button key={id} className="btn" onClick={()=>nav(id)} style={{padding:"4px 7px",borderRadius:99,fontSize:10,fontWeight:600,background:page===id?T.ac:"transparent",color:page===id?"#080808":T.mt}}>{l}</button>
               ))}
+              <button className="btn" onClick={()=>nav("settings")} style={{padding:"4px 6px",borderRadius:99,fontSize:13,background:page==="settings"?T.ac:"transparent",color:page==="settings"?"#080808":T.mt}}>⚙️</button>
             </nav>
           </header>}
           <div key={page+selCareer+selMilestone+(selBranch?.id||"")} className="fu">
@@ -519,6 +520,7 @@ export default function LifePath() {
             {page==="dashboard"&&<DashboardPage/>}
             {page==="compare"&&<ComparePage/>}
             {page==="treevisual"&&<TreeVisual onBack={()=>nav("tree")}/>}
+            {page==="settings"&&<SettingsPage/>}
           </div>
         </>)}
       </div>
@@ -1146,7 +1148,110 @@ const DailyPage = () => {
   );
 };
 
-// ━━━ HELPERS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━ SETTINGS PAGE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const SettingsPage = () => {
+  const {nav,userName,setUserName,setOnboardingDone,notify} = useCtx();
+  const [nameEdit, setNameEdit] = useState(userName);
+  const [resetPending, setResetPending] = useState(false);
+  const [immersive, setImmersive] = useState(()=>{try{return JSON.parse(localStorage.getItem("lp_immersive")||"false")}catch{return false}});
+  const [notifEnabled, setNotifEnabled] = useState(()=>{try{return JSON.parse(localStorage.getItem("lp_notif")||"false")}catch{return false}});
+
+  const toggle = (key, val, setter) => {
+    setter(val);
+    try{localStorage.setItem(key, JSON.stringify(val));}catch{}
+  };
+
+  const saveName = () => {
+    const trimmed = nameEdit.trim();
+    if(trimmed) { setUserName(trimmed); notify("Prénom mis à jour !"); }
+  };
+
+  const handleReset = () => {
+    if(!resetPending){ setResetPending(true); setTimeout(()=>setResetPending(false),2500); return; }
+    try{ localStorage.removeItem("lifepath_v1"); }catch{}
+    setOnboardingDone(false);
+    notify("Progression réinitialisée.");
+    nav("home");
+  };
+
+  const row = (label, children) => (
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 0",borderBottom:`1px solid ${T.bd}`}}>
+      <span style={{fontSize:13,color:T.tx}}>{label}</span>
+      {children}
+    </div>
+  );
+
+  const Toggle = ({val, onChange}) => (
+    <div onClick={onChange} style={{width:42,height:24,borderRadius:99,background:val?T.ac:T.sb,cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
+      <div style={{position:"absolute",top:3,left:val?20:3,width:18,height:18,borderRadius:"50%",background:val?"#080808":"#fff",transition:"left .2s"}}/>
+    </div>
+  );
+
+  return (
+    <div style={{paddingTop:66,minHeight:"100vh"}}>
+      <div style={{maxWidth:540,margin:"0 auto",padding:"16px 18px 80px"}}>
+
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}>
+          <span style={{fontSize:26}}>⚙️</span>
+          <h1 style={{fontFamily:T.fd,fontSize:20,fontWeight:800,letterSpacing:"-0.8px"}}>Paramètres</h1>
+        </div>
+
+        {/* Prénom */}
+        <div style={{background:T.sf,border:`1px solid ${T.bd}`,borderRadius:14,padding:"14px 16px",marginBottom:12}}>
+          <p style={{fontSize:9,color:T.mt,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:10}}>PROFIL</p>
+          {row("Prénom",
+            <div style={{display:"flex",gap:6}}>
+              <input value={nameEdit} onChange={e=>setNameEdit(e.target.value)}
+                onKeyDown={e=>e.key==="Enter"&&saveName()}
+                style={{background:T.sfh,border:`1px solid ${T.bd}`,borderRadius:8,padding:"5px 10px",fontSize:12,color:T.tx,width:100,fontFamily:T.fb}} />
+              <button className="btn" onClick={saveName}
+                style={{background:T.ac,color:"#080808",borderRadius:8,padding:"5px 10px",fontSize:11,fontWeight:700}}>OK</button>
+            </div>
+          )}
+        </div>
+
+        {/* Toggles */}
+        <div style={{background:T.sf,border:`1px solid ${T.bd}`,borderRadius:14,padding:"14px 16px",marginBottom:12}}>
+          <p style={{fontSize:9,color:T.mt,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:6}}>AFFICHAGE</p>
+          {row("Mode Immersif par défaut", <Toggle val={immersive} onChange={()=>toggle("lp_immersive",!immersive,setImmersive)} />)}
+          {row("Notifications navigateur", <Toggle val={notifEnabled} onChange={()=>toggle("lp_notif",!notifEnabled,setNotifEnabled)} />)}
+        </div>
+
+        {/* Danger zone */}
+        <div style={{background:T.sf,border:`1px solid ${T.rd}22`,borderRadius:14,padding:"14px 16px",marginBottom:12}}>
+          <p style={{fontSize:9,color:T.mt,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:10}}>ZONE DANGEREUSE</p>
+          <button className="btn" onClick={handleReset}
+            style={{width:"100%",padding:"12px",borderRadius:10,border:`1px solid ${resetPending?T.rd:T.bd}`,
+              background:resetPending?"rgba(255,77,77,.12)":"transparent",
+              color:resetPending?T.rd:T.mt,fontSize:12,fontWeight:700,transition:"all .2s"}}>
+            {resetPending ? "⚠️ Confirmer la réinitialisation (clic)" : "🗑️ Réinitialiser ma progression"}
+          </button>
+        </div>
+
+        {/* À propos */}
+        <div style={{background:T.sf,border:`1px solid ${T.bd}`,borderRadius:14,padding:"14px 16px"}}>
+          <p style={{fontSize:9,color:T.mt,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:10}}>À PROPOS</p>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+            <span style={{fontSize:12,color:T.mt}}>Version</span>
+            <span style={{fontSize:12,color:T.ac,fontWeight:700}}>v1.0.0</span>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}>
+            <span style={{fontSize:12,color:T.mt}}>Code source</span>
+            <a href="https://github.com/jefflitelife/lifepath" target="_blank" rel="noreferrer"
+              style={{fontSize:12,color:T.bl,fontWeight:700,textDecoration:"none"}}>GitHub →</a>
+          </div>
+          <div style={{background:T.sfh,borderRadius:10,padding:"12px"}}>
+            <p style={{fontFamily:T.fd,fontSize:13,fontWeight:800,color:T.ac,marginBottom:4}}>LifePath</p>
+            <p style={{fontSize:11,color:T.mt,lineHeight:1.5}}>Ton compagnon de développement personnel. Explore des parcours de carrière, cultive ton arbre de vie, et progresse chaque jour vers la meilleure version de toi-même.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+// ━━━ HELPERS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const QUOTES = [
   "Le voyage de mille lieues commence par un seul pas.",
   "La discipline est le pont entre les objectifs et les accomplissements.",

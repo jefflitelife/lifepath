@@ -442,6 +442,7 @@ export default function LifePath() {
   const [userName,       setUserName]       = useState(() => loadLS().userName || "");
   const [onboardingDone, setOnboardingDone] = useState(() => !!loadLS().onboardingDone);
   const [activeDays,     setActiveDays]     = useState(() => loadLS().activeDays || 1);
+  const [pillars,        setPillars]        = useState(() => loadLS().pillars || null);
   // Compare
   const [compareA, setCompareA] = useState(null);
   const [compareB, setCompareB] = useState(null);
@@ -459,8 +460,8 @@ export default function LifePath() {
   };
 
   useEffect(() => {
-    saveLS({ completedMs, favorites, treeBranches, treeObjCompleted, streak, todayDate, todayChecks, userName, onboardingDone, activeDays, lastVisit: new Date().toISOString().slice(0,10) });
-  }, [completedMs, favorites, treeBranches, treeObjCompleted, streak, todayDate, todayChecks, userName, onboardingDone, activeDays]);
+    saveLS({ completedMs, favorites, treeBranches, treeObjCompleted, streak, todayDate, todayChecks, userName, onboardingDone, activeDays, pillars, lastVisit: new Date().toISOString().slice(0,10) });
+  }, [completedMs, favorites, treeBranches, treeObjCompleted, streak, todayDate, todayChecks, userName, onboardingDone, activeDays, pillars]);
 
   useEffect(() => {
     // ── Streak update on visit
@@ -536,7 +537,7 @@ export default function LifePath() {
     notify(`🌱 "${branch.title}" ajoutée !`);
   };
 
-  const ctx = {page,nav,selCareer,selMilestone,completedMs,toggleMs,isMsDone,getProgress,search,setSearch,cat,setCat,favorites,toggleFav,treeBranches,setTreeBranches,selBranch,setSelBranch,treeObjCompleted,toggleTreeObj,isTreeObjDone,treeBranchProg,treeLevelProg,isTreeLevelUnlocked,addTreeBranch,notification,notify,streak,todayChecks,bumpToday,userName,setUserName,onboardingDone,setOnboardingDone,activeDays,compareA,setCompareA,compareB,setCompareB};
+  const ctx = {page,nav,selCareer,selMilestone,completedMs,toggleMs,isMsDone,getProgress,search,setSearch,cat,setCat,favorites,toggleFav,treeBranches,setTreeBranches,selBranch,setSelBranch,treeObjCompleted,toggleTreeObj,isTreeObjDone,treeBranchProg,treeLevelProg,isTreeLevelUnlocked,addTreeBranch,notification,notify,streak,todayChecks,bumpToday,userName,setUserName,onboardingDone,setOnboardingDone,activeDays,pillars,setPillars,compareA,setCompareA,compareB,setCompareB};
 
   return (
     <Ctx.Provider value={ctx}>
@@ -604,12 +605,22 @@ export default function LifePath() {
 
 // ━━━ ONBOARDING ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const ONBOARD_CAREER_IDS = ["fullstack","uxdesign","entrepreneur","dataanalyst","cybersecurite","infirmier","commercial","devops","datascientist","kine"];
+const PILLARS_DEF = [
+  {id:"corps",   emoji:"🏃", label:"Corps",     ph:"ex: 3 séances de sport / semaine"},
+  {id:"mental",  emoji:"🧠", label:"Mental",    ph:"ex: Méditer 10 min / jour"},
+  {id:"social",  emoji:"🤝", label:"Social",    ph:"ex: 1 sortie entre amis / semaine"},
+  {id:"finance", emoji:"💰", label:"Finance",   ph:"ex: Économiser 100€ / mois"},
+  {id:"perso",   emoji:"✨", label:"Personnel", ph:"ex: Lire 20 min / soir"},
+];
+
 const OnboardingFlow = () => {
-  const {setUserName,setOnboardingDone,treeBranches,setTreeBranches,nav} = useCtx();
-  const [step, setStep]     = useState(1);
-  const [name, setNameVal]  = useState("");
-  const [selCId, setSelCId] = useState(null);
-  const [selB, setSelB]     = useState(null);
+  const {setUserName,setOnboardingDone,treeBranches,setTreeBranches,nav,setPillars} = useCtx();
+  const [step, setStep]           = useState(1);
+  const [name, setNameVal]        = useState("");
+  const [selCId, setSelCId]       = useState(null);
+  const [selB, setSelB]           = useState(null);
+  const [selP, setSelP]           = useState({});
+  const [pillarGoals, setPillarGoals] = useState({});
 
   const careers = ONBOARD_CAREER_IDS.map(id=>C[id]).filter(Boolean);
   const branches = [
@@ -624,6 +635,12 @@ const OnboardingFlow = () => {
   const complete = (skipBranch=false) => {
     const n = name.trim() || "toi";
     setUserName(n);
+    const activePillars = PILLARS_DEF.filter(p=>selP[p.id]);
+    if(activePillars.length > 0) {
+      const pd = {};
+      activePillars.forEach(p => { pd[p.id] = {enabled:true, goal:pillarGoals[p.id]||"", emoji:p.emoji, label:p.label}; });
+      setPillars(pd);
+    }
     setOnboardingDone(true);
     if(!skipBranch && selB && !treeBranches.find(b=>b.id===selB.id))
       setTreeBranches(prev=>[...prev, selB]);
@@ -632,7 +649,7 @@ const OnboardingFlow = () => {
 
   const Dots = () => (
     <div style={{display:"flex",gap:5,alignItems:"center"}}>
-      {[1,2,3].map(i=><div key={i} style={{width:i===step?20:6,height:6,borderRadius:99,background:i===step?T.ac:i<step?T.ac+"60":T.sb,transition:"all .3s"}}/>)}
+      {[1,2,3,4].map(i=><div key={i} style={{width:i===step?20:6,height:6,borderRadius:99,background:i===step?T.ac:i<step?T.ac+"60":T.sb,transition:"all .3s"}}/>)}
     </div>
   );
 
@@ -688,13 +705,13 @@ const OnboardingFlow = () => {
     </div>
   );
 
-  return (
+  if(step===3) return (
     <div style={{...baseStyle,paddingTop:24}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:28}}>
         <button className="btn" onClick={()=>setStep(2)} style={{background:"none",color:T.mt,fontSize:12,fontWeight:600,padding:0}}>← Retour</button>
         <Dots/>
       </div>
-      <h1 style={{fontFamily:T.fd,fontSize:24,fontWeight:800,letterSpacing:"-1px",marginBottom:4}}>Dernière étape ! 🎯</h1>
+      <h1 style={{fontFamily:T.fd,fontSize:24,fontWeight:800,letterSpacing:"-1px",marginBottom:4}}>Presque ! 🎯</h1>
       <p style={{color:T.mt,fontSize:13,marginBottom:18}}>Ta première branche de vie à développer en parallèle.</p>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:20}}>
         {branches.map(b=>{
@@ -708,8 +725,45 @@ const OnboardingFlow = () => {
           );
         })}
       </div>
-      <button className="btn" onClick={()=>selB&&complete()} disabled={!selB}
+      <button className="btn" onClick={()=>selB&&setStep(4)} disabled={!selB}
         style={{background:selB?T.ac:"rgba(255,255,255,.05)",color:selB?"#080808":T.mt,borderRadius:14,padding:"14px",fontSize:14,fontWeight:700,width:"100%",boxShadow:selB?`0 4px 24px ${T.acg}`:"none",transition:"all .2s",marginBottom:8}}>
+        Continuer →
+      </button>
+      <button className="btn" onClick={()=>setStep(4)} style={{background:"none",color:T.mt,fontSize:12,padding:"8px",width:"100%"}}>
+        Passer cette étape →
+      </button>
+    </div>
+  );
+
+  return (
+    <div style={{...baseStyle,paddingTop:24}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:28}}>
+        <button className="btn" onClick={()=>setStep(3)} style={{background:"none",color:T.mt,fontSize:12,fontWeight:600,padding:0}}>← Retour</button>
+        <Dots/>
+      </div>
+      <h1 style={{fontFamily:T.fd,fontSize:24,fontWeight:800,letterSpacing:"-1px",marginBottom:4}}>Tes Piliers de Vie 🌟</h1>
+      <p style={{color:T.mt,fontSize:13,marginBottom:18}}>Active les piliers qui comptent pour toi et définis ton objectif hebdomadaire.</p>
+      <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
+        {PILLARS_DEF.map(p=>{
+          const on=!!selP[p.id];
+          return (
+            <div key={p.id} style={{background:T.sf,border:`1px solid ${on?T.ac+"55":T.bd}`,borderRadius:14,padding:"12px 14px",transition:"border-color .2s"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:on?10:0}}>
+                <span style={{fontSize:14,fontWeight:700,fontFamily:T.fd}}>{p.emoji} {p.label}</span>
+                <div onClick={()=>setSelP(prev=>({...prev,[p.id]:!prev[p.id]}))}
+                  style={{width:40,height:22,borderRadius:99,background:on?T.ac:T.sb,cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
+                  <div style={{position:"absolute",top:2,left:on?20:2,width:18,height:18,borderRadius:"50%",background:on?"#080808":"#fff",transition:"left .2s"}}/>
+                </div>
+              </div>
+              {on&&<input value={pillarGoals[p.id]||""} onChange={e=>setPillarGoals(prev=>({...prev,[p.id]:e.target.value}))}
+                placeholder={p.ph}
+                style={{width:"100%",background:T.sfh,border:`1px solid ${T.bd}`,borderRadius:8,padding:"8px 10px",fontSize:12,color:T.tx,fontFamily:T.fb,boxSizing:"border-box"}}/>}
+            </div>
+          );
+        })}
+      </div>
+      <button className="btn" onClick={()=>complete(false)}
+        style={{background:T.ac,color:"#080808",borderRadius:14,padding:"14px",fontSize:14,fontWeight:700,width:"100%",boxShadow:`0 4px 24px ${T.acg}`,marginBottom:8}}>
         🚀 Lancer LifePath
       </button>
       <button className="btn" onClick={()=>complete(true)} style={{background:"none",color:T.mt,fontSize:12,padding:"8px",width:"100%"}}>
@@ -1184,7 +1238,7 @@ const TreeBranchPage = () => {
 
 // ━━━ DAILY PAGE (simplified) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const DailyPage = () => {
-  const {nav,selCareer,treeBranches,isMsDone,isTreeLevelUnlocked} = useCtx();
+  const {nav,selCareer,treeBranches,isMsDone,isTreeLevelUnlocked,pillars} = useCtx();
   const career = selCareer ? C[selCareer] : null;
   const currentMs = career ? (career.ms.find((_,i) => !isMsDone(career.id,i) && career.ms.slice(0,i).every((_,j) => isMsDone(career.id,j))) || career.ms[0]) : null;
   return (
@@ -1213,7 +1267,20 @@ const DailyPage = () => {
           );
         })}
 
-        {!career&&treeBranches.length===0&&<div style={{textAlign:"center",padding:30,color:T.mt}}>
+        {/* Piliers de Vie */}
+        {pillars && Object.values(pillars).some(p=>p.enabled) && (
+          <Sec t="🎯 Piliers de Vie">
+            {Object.values(pillars).filter(p=>p.enabled).map((p,i)=>(
+              <div key={i} style={{background:T.sf,border:`1px solid ${T.bd}`,borderRadius:8,padding:"8px 10px",marginBottom:4,fontSize:11,color:T.tx,display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:14}}>{p.emoji}</span>
+                <span style={{flex:1}}>{p.label}{p.goal?` — ${p.goal}`:""}</span>
+              </div>
+            ))}
+            <button className="btn" onClick={()=>nav("settings")} style={{fontSize:10,color:T.mt,background:"none",padding:"4px 0"}}>Modifier les piliers →</button>
+          </Sec>
+        )}
+
+        {!career&&treeBranches.length===0&&(!pillars||Object.values(pillars).every(p=>!p.enabled))&&<div style={{textAlign:"center",padding:30,color:T.mt}}>
           <p style={{fontSize:13,marginBottom:10}}>Choisis un parcours et ajoute des branches pour voir tes tâches quotidiennes.</p>
           <button className="btn" onClick={()=>nav("explore")} style={{background:T.ac,color:"#080808",borderRadius:8,padding:"8px 16px",fontSize:12,fontWeight:700}}>Explorer</button>
         </div>}
@@ -1224,11 +1291,28 @@ const DailyPage = () => {
 
 // ━━━ SETTINGS PAGE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const SettingsPage = () => {
-  const {nav,userName,setUserName,setOnboardingDone,notify} = useCtx();
+  const {nav,userName,setUserName,setOnboardingDone,notify,pillars,setPillars} = useCtx();
   const [nameEdit, setNameEdit] = useState(userName);
   const [resetPending, setResetPending] = useState(false);
   const [immersive, setImmersive] = useState(()=>{try{return JSON.parse(localStorage.getItem("lp_immersive")||"false")}catch{return false}});
   const [notifEnabled, setNotifEnabled] = useState(()=>{try{return JSON.parse(localStorage.getItem("lp_notif")||"false")}catch{return false}});
+  const [pillarEdit, setPillarEdit] = useState(() => {
+    if(!pillars) {
+      const d = {};
+      PILLARS_DEF.forEach(p=>{ d[p.id]={enabled:false,goal:"",emoji:p.emoji,label:p.label}; });
+      return d;
+    }
+    const d = {};
+    PILLARS_DEF.forEach(p=>{ d[p.id] = pillars[p.id] || {enabled:false,goal:"",emoji:p.emoji,label:p.label}; });
+    return d;
+  });
+
+  const savePillars = () => {
+    const active = {};
+    PILLARS_DEF.forEach(p=>{ if(pillarEdit[p.id]?.enabled) active[p.id]=pillarEdit[p.id]; });
+    setPillars(Object.keys(active).length>0 ? active : null);
+    notify("Piliers mis à jour !");
+  };
 
   const toggle = (key, val, setter) => {
     setter(val);
@@ -1289,6 +1373,32 @@ const SettingsPage = () => {
           <p style={{fontSize:9,color:T.mt,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:6}}>AFFICHAGE</p>
           {row("Mode Immersif par défaut", <Toggle val={immersive} onChange={()=>toggle("lp_immersive",!immersive,setImmersive)} />)}
           {row("Notifications navigateur", <Toggle val={notifEnabled} onChange={()=>toggle("lp_notif",!notifEnabled,setNotifEnabled)} />)}
+        </div>
+
+        {/* Piliers de Vie */}
+        <div style={{background:T.sf,border:`1px solid ${T.bd}`,borderRadius:14,padding:"14px 16px",marginBottom:12}}>
+          <p style={{fontSize:9,color:T.mt,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:10}}>PILIERS DE VIE</p>
+          {PILLARS_DEF.map(p=>{
+            const entry = pillarEdit[p.id]||{enabled:false,goal:""};
+            return (
+              <div key={p.id} style={{marginBottom:8,padding:"8px 0",borderBottom:`1px solid ${T.bd}`}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:entry.enabled?8:0}}>
+                  <span style={{fontSize:13,color:T.tx}}>{p.emoji} {p.label}</span>
+                  <div onClick={()=>setPillarEdit(prev=>({...prev,[p.id]:{...prev[p.id],enabled:!prev[p.id]?.enabled}}))}
+                    style={{width:40,height:22,borderRadius:99,background:entry.enabled?T.ac:T.sb,cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
+                    <div style={{position:"absolute",top:2,left:entry.enabled?20:2,width:18,height:18,borderRadius:"50%",background:entry.enabled?"#080808":"#fff",transition:"left .2s"}}/>
+                  </div>
+                </div>
+                {entry.enabled&&<input value={entry.goal||""} onChange={e=>setPillarEdit(prev=>({...prev,[p.id]:{...prev[p.id],goal:e.target.value}}))}
+                  placeholder={p.ph}
+                  style={{width:"100%",background:T.sfh,border:`1px solid ${T.bd}`,borderRadius:8,padding:"6px 10px",fontSize:11,color:T.tx,fontFamily:T.fb,boxSizing:"border-box"}}/>}
+              </div>
+            );
+          })}
+          <button className="btn" onClick={savePillars}
+            style={{width:"100%",marginTop:8,padding:"10px",borderRadius:10,background:T.ac,color:"#080808",fontSize:12,fontWeight:700}}>
+            Sauvegarder les piliers
+          </button>
         </div>
 
         {/* Danger zone */}

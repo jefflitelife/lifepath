@@ -1,48 +1,59 @@
 # NEXT_STEPS.md
 
-Fonctionnalités restantes à implémenter, par priorité décroissante.
+## ✅ Complétées (overnight session 2026-06-07)
 
-## Backend & persistance — Supabase
+- **Étape 1** — TreeVisual.jsx (Mode Immersif Final Fantasy) — Canvas starfield + SVG branch nodes
+- **Étape 2** — Dashboard amélioré — citations, graphique hebdo, prochaine étape, branches actives
+- **Étape 3** — Page Paramètres — toggles immersif/notifs, piliers, prénom, reset, à propos
+- **Étape 4** — 20 métiers enrichis à 6 jalons complets chacun (4 groupes de 5)
+- **Étape 5** — Piliers de Vie configurables — onboarding step 4, DailyPage, SettingsPage
+- **Étape 6** — 8 badges avec détection automatique + confetti au déverrouillage
+- **Étape 7** — Arbre de vie amélioré — % global, synergies actives, cartes visuelles, partager
+- **Étape 8** — SEO + PWA — meta tags, og:, theme-color, favicon SVG 🌳, manifest.json
+- **Étape 9** — Performance — spinner lime, useMemo ExplorePage, localStorage try/catch confirmé
+- **Étape 10** — Documentation — CLAUDE.md, NEXT_STEPS.md, README.md
+
+---
+
+## À venir — Priorité haute
+
+### Backend & persistance — Supabase
 
 Remplacer le localStorage par une vraie base de données pour synchroniser la progression entre appareils.
 
-- Créer un projet Supabase, tables : `users`, `progress` (completedMs, treeBranches, treeObjCompleted), `streaks`
+- Créer un projet Supabase, tables : `users`, `progress` (completedMs, treeBranches, treeObjCompleted, pillars), `streaks`
 - `loadLS()` / `saveLS()` → remplacer par appels Supabase client (`@supabase/supabase-js`)
 - Gérer le mode offline-first : écrire en localStorage en premier, syncer en arrière-plan
 - Migration : importer le localStorage existant au premier login
 
-## Auth — authentification utilisateur
-
-Permettre de retrouver sa progression sur n'importe quel appareil.
+### Auth — authentification utilisateur
 
 - Supabase Auth (email magic link ou Google OAuth)
 - Adapter `OnboardingFlow` : si utilisateur connu → skip étapes déjà complétées
-- Protéger les routes qui nécessitent un compte (Dashboard, TreePage)
-- Stocker `userName` côté Supabase plutôt qu'en localStorage
+- Protéger les routes Dashboard, TreePage
+- Stocker `userName` et `pillars` côté Supabase
 
-## Monétisation — Stripe
+### Monétisation — Stripe
 
-Modèle freemium : parcours de base gratuits, parcours premium et fonctions avancées payants.
+- Modèle freemium : Free (5 parcours) / Pro (tout)
+- Stripe Checkout ou Customer Portal
+- Webhook Supabase pour update statut abonnement
 
-- Intégrer Stripe Checkout ou Stripe Customer Portal
-- Définir les tiers : Free (5 parcours, arbre limité) / Pro (tout débloquer)
-- Gate côté client sur `DashboardPage` et `ComparePage` pour les non-abonnés
-- Webhook Supabase pour mettre à jour le statut abonnement en temps réel
+## À venir — Priorité normale
 
-## TreeVisual — arbre de vie visuel
+### Catalogue étendu — 50 métiers
 
-Remplacer la grille de cartes `TreePage` par une visualisation en arbre SVG ou Canvas.
+- 20 parcours supplémentaires dans les catégories sous-représentées : `care`, `trade`, `law`, `science`
+- Même schéma 6 jalons que les 30 existants
 
-- Nœuds = branches (`treeBranches`), reliés par les `connections` de `LIFE_BRANCHES`
-- Nœuds actifs colorés, nœuds verrouillés en grisé
-- Cliquer un nœud → `nav("treebranch")` avec la branche sélectionnée
-- Animation de "croissance" quand une nouvelle branche est ajoutée (Web Animations API, cohérent avec `triggerCelebration`)
+### Service Worker — offline PWA
 
-## Catalogue étendu — 50 métiers
+- Cache des assets statiques
+- Page offline fallback
+- Push notifications natives (via service worker)
 
-Passer de 30 à 50 parcours dans `C` et `HORIZON`.
+### Analytics & onboarding
 
-- 20 parcours supplémentaires à ajouter dans les catégories sous-représentées : `care`, `trade`, `law`, `science`
-- Chaque entrée suit le même schéma (voir section "Career data shape" dans CLAUDE.md)
-- Ajouter les entrées correspondantes dans `HORIZON` (champs `ss`, `ai`, `gr`, `timeline`, `verdict`)
-- Mettre à jour `CAREER_LIST` (dérivé de `Object.values(C)`) — aucun autre changement nécessaire
+- Tracking d'événements anonyme (Plausible ou umami)
+- A/B test du flow onboarding
+- NPS après 7 jours d'utilisation

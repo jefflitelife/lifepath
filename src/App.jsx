@@ -736,7 +736,7 @@ const ExplorePage = () => {
                   </div>
                   <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"center"}}>
                     <button className="btn" onClick={e=>{e.stopPropagation();toggleFav(c.id);}} style={{background:"none",fontSize:13,padding:2,color:fav?T.ac:T.sb}}>{fav?"★":"☆"}</button>
-                    <button className="btn" onClick={e=>handleCompare(e,c)} title="Comparer" style={{background:isA?T.bl+"20":"none",border:isA?`1px solid ${T.bl}40`:"none",borderRadius:4,fontSize:11,padding:"1px 3px",color:isA?T.bl:T.mt,fontWeight:isA?700:400}}>⚖</button>
+                    <button className="btn" onClick={e=>handleCompare(e,c)} style={{background:isA?T.bl+"20":T.sb,border:`1px solid ${isA?T.bl+"60":T.bd}`,borderRadius:6,fontSize:9,padding:"3px 6px",color:isA?T.bl:T.mt,fontWeight:700,whiteSpace:"nowrap"}}>{isA?"⚖ Sélect.":"⚖ Comparer"}</button>
                   </div>
                 </div>
               </div>
@@ -1430,6 +1430,7 @@ const ComparePage = () => {
           <CmpRow icon="💰" label="Coût"        vA={compareA.cost} vB={compareB.cost}/>
           <CmpRow icon="📊" label="Niveau"      vA={compareA.lv} vB={compareB.lv}/>
           <CmpRow icon="💼" label="Sal. junior" vA={compareA.sal.j} vB={compareB.sal.j}/>
+          <CmpRow icon="📊" label="Sal. mid"    vA={compareA.sal.m} vB={compareB.sal.m}/>
           <CmpRow icon="📈" label="Sal. senior" vA={compareA.sal.s} vB={compareB.sal.s}/>
           <CmpRow icon="🎓" label="Jalons"      vA={`${compareA.ms.length} étapes`} vB={`${compareB.ms.length} étapes`}/>
 

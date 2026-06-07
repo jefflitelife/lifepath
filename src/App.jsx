@@ -386,7 +386,7 @@ const BADGES = [
   {id:"cameleon", icon:"🌐", name:"Caméléon",      desc:"2 parcours commencés",               check:({getProgress}) => CAREER_LIST.filter(c=>getProgress(c.id)>0).length>=2},
 ];
 
-const Ctx = createContext(null);
+export const Ctx = createContext(null);
 const useCtx = () => useContext(Ctx);
 
 // ━━━ CELEBRATION ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -597,7 +597,7 @@ export default function LifePath() {
             {page==="daily"&&<DailyPage/>}
             {page==="dashboard"&&<DashboardPage/>}
             {page==="compare"&&<ComparePage/>}
-            {page==="treevisual"&&<TreeVisual onBack={()=>nav("tree")}/>}
+            {page==="treevisual"&&<TreeVisual/>}
             {page==="settings"&&<SettingsPage/>}
           </div>
         </>)}

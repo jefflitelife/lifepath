@@ -302,6 +302,29 @@ const LIFE_BRANCHES = {
 const Ctx = createContext(null);
 const useCtx = () => useContext(Ctx);
 
+// ━━━ CELEBRATION ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const CONF_COLORS = [T.ac,T.gr,T.bl,T.pu,T.or,T.yl,"#FF4D9D"];
+const triggerCelebration = (x, y) => {
+  const wrap = document.createElement("div");
+  wrap.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9998;overflow:hidden";
+  document.body.appendChild(wrap);
+  for(let i=0;i<16;i++){
+    const el  = document.createElement("div");
+    const col = CONF_COLORS[i%CONF_COLORS.length];
+    const ang = (i/16)*Math.PI*2+(Math.random()-.5)*.9;
+    const dst = 60+Math.random()*90;
+    const sz  = 5+Math.random()*7;
+    el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:${sz}px;height:${sz}px;background:${col};border-radius:${Math.random()>.5?"50%":"3px"};pointer-events:none`;
+    el.animate(
+      [{transform:"translate(-50%,-50%) translate(0,0) rotate(0deg)",opacity:1},
+       {transform:`translate(-50%,-50%) translate(${Math.cos(ang)*dst}px,${Math.sin(ang)*dst-60}px) rotate(${(Math.random()-.5)*720}deg)`,opacity:0}],
+      {duration:520+Math.random()*260,easing:"cubic-bezier(.2,.8,.4,1)",fill:"forwards"}
+    );
+    wrap.appendChild(el);
+  }
+  setTimeout(()=>wrap.remove(),900);
+};
+
 // ━━━ PERSISTENCE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const LS_KEY = "lifepath_v1";
 const loadLS = () => { try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch { return {}; } };
@@ -321,15 +344,62 @@ export default function LifePath() {
   const [selBranch, setSelBranch] = useState(null);
   const [treeObjCompleted, setTreeObjCompleted] = useState(() => loadLS().treeObjCompleted || {});
   const [notification, setNotification] = useState(null);
+  const [streak,      setStreak]      = useState(() => loadLS().streak || 1);
+  const [todayDate,   setTodayDate]   = useState(() => loadLS().todayDate || new Date().toISOString().slice(0,10));
+  const [todayChecks, setTodayChecks] = useState(() => { const s=loadLS(),t=new Date().toISOString().slice(0,10); return s.todayDate===t?(s.todayChecks||0):0; });
 
   const nav = (p, c, m) => { if(c!==undefined) setSelCareer(c); if(m!==undefined) setSelMilestone(m); setPage(p); };
   const notify = (msg) => { setNotification(msg); setTimeout(()=>setNotification(null), 3500); };
   const toggleMs = (cId, mId) => setCompletedMs(p => ({...p,[`${cId}-${mId}`]:!p[`${cId}-${mId}`]}));
   const isMsDone = (cId, mId) => !!completedMs[`${cId}-${mId}`];
   const getProgress = (cId) => { const c=C[cId]; if(!c) return 0; const d=c.ms.filter(m=>isMsDone(cId,m.i||m.p)).length; return Math.round(d/c.ms.length*100); };
-  const toggleFav = (id) => setFavorites(p => p.includes(id) ? p.filter(x=>x!==id) : [...p, id]);
+  const toggleFav  = (id) => setFavorites(p => p.includes(id) ? p.filter(x=>x!==id) : [...p, id]);
+  const bumpToday  = () => {
+    const today = new Date().toISOString().slice(0,10);
+    if(todayDate!==today){ setTodayDate(today); setTodayChecks(1); }
+    else setTodayChecks(c=>c+1);
+  };
 
-  useEffect(() => { saveLS({ completedMs, favorites, treeBranches, treeObjCompleted }); }, [completedMs, favorites, treeBranches, treeObjCompleted]);
+  useEffect(() => {
+    saveLS({ completedMs, favorites, treeBranches, treeObjCompleted, streak, todayDate, todayChecks, lastVisit: new Date().toISOString().slice(0,10) });
+  }, [completedMs, favorites, treeBranches, treeObjCompleted, streak, todayDate, todayChecks]);
+
+  useEffect(() => {
+    // ── Streak update on visit
+    const saved = loadLS();
+    const today = new Date().toISOString().slice(0,10);
+    const yest  = new Date(Date.now()-864e5).toISOString().slice(0,10);
+    if(saved.lastVisit && saved.lastVisit!==today)
+      setStreak(saved.lastVisit===yest ? (saved.streak||1)+1 : 1);
+    if(saved.todayDate && saved.todayDate!==today){ setTodayDate(today); setTodayChecks(0); }
+    // ── Browser notifications
+    if(!("Notification" in window)) return;
+    (async()=>{
+      let perm = Notification.permission;
+      if(perm==="default") perm = await Notification.requestPermission();
+      if(perm!=="granted") return;
+      const today2 = new Date().toISOString().slice(0,10);
+      const lastN  = localStorage.getItem("lifepath_notif_date");
+      const now    = new Date();
+      const next9  = new Date(now); next9.setHours(9,0,0,0);
+      if(now>=next9 && lastN!==today2){
+        // Past 9am, not yet notified today → show now
+        new Notification("LifePath 🌱",{body:`🔥 ${loadLS().streak||1} jour(s) de streak ! Vos tâches du jour vous attendent.`,icon:"/favicon.ico"});
+        localStorage.setItem("lifepath_notif_date",today2);
+        next9.setDate(next9.getDate()+1);
+      } else if(lastN===today2){
+        // Already notified today → schedule tomorrow
+        next9.setDate(next9.getDate()+1);
+      }
+      // Schedule next fire (today if <9am, tomorrow otherwise)
+      const delay = next9-new Date();
+      if(delay>0) setTimeout(()=>{
+        const s=loadLS(),t=new Date().toISOString().slice(0,10);
+        new Notification("LifePath 🌱",{body:`🔥 ${s.streak||1} jour(s) de streak ! Bonne journée productive.`,icon:"/favicon.ico"});
+        localStorage.setItem("lifepath_notif_date",t);
+      }, delay);
+    })();
+  }, []);
 
   // Tree helpers
   const toggleTreeObj = (branchId, objText) => {
@@ -366,7 +436,7 @@ export default function LifePath() {
     notify(`🌱 "${branch.title}" ajoutée !`);
   };
 
-  const ctx = {page,nav,selCareer,selMilestone,completedMs,toggleMs,isMsDone,getProgress,search,setSearch,cat,setCat,favorites,toggleFav,treeBranches,setTreeBranches,selBranch,setSelBranch,treeObjCompleted,toggleTreeObj,isTreeObjDone,treeBranchProg,treeLevelProg,isTreeLevelUnlocked,addTreeBranch,notification,notify};
+  const ctx = {page,nav,selCareer,selMilestone,completedMs,toggleMs,isMsDone,getProgress,search,setSearch,cat,setCat,favorites,toggleFav,treeBranches,setTreeBranches,selBranch,setSelBranch,treeObjCompleted,toggleTreeObj,isTreeObjDone,treeBranchProg,treeLevelProg,isTreeLevelUnlocked,addTreeBranch,notification,notify,streak,todayChecks,bumpToday};
 
   return (
     <Ctx.Provider value={ctx}>
@@ -376,7 +446,11 @@ export default function LifePath() {
         ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:${T.sb};border-radius:99px}
         @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
         @keyframes slideIn{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes fireFlicker{0%,100%{transform:scale(1) rotate(-3deg)}25%{transform:scale(1.18) rotate(3deg)}50%{transform:scale(.93) rotate(-2deg)}75%{transform:scale(1.08) rotate(2deg)}}
+        @keyframes scorePopIn{0%{transform:scale(.4);opacity:0}75%{transform:scale(1.2)}100%{transform:scale(1);opacity:1}}
         .fu{animation:fadeUp .38s ease both}
+        .fire{animation:fireFlicker .75s ease-in-out infinite;display:inline-block;transform-origin:center bottom}
+        .pop{animation:scorePopIn .38s cubic-bezier(.34,1.56,.64,1) both}
         .btn{cursor:pointer;border:none;font-family:${T.fb};transition:all .15s ease}.btn:active{transform:scale(.97)}
         .card{transition:all .2s ease}.card:hover{transform:translateY(-1px)}
         .tag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:99px;font-size:10px;font-weight:600;white-space:nowrap}
@@ -391,6 +465,17 @@ export default function LifePath() {
             <div style={{width:20,height:20,borderRadius:5,background:T.ac,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:900,color:"#080808"}}>L</div>
             <span style={{fontFamily:T.fd,fontWeight:800,fontSize:14}}>LifePath</span>
           </button>
+          <div style={{display:"flex",alignItems:"center",gap:7}}>
+            <div style={{display:"flex",alignItems:"center",gap:2}}>
+              <span className={streak>1?"fire":""} style={{fontSize:15,lineHeight:1}}>🔥</span>
+              <span style={{fontSize:12,fontWeight:800,color:streak>=7?T.ac:streak>=3?T.or:T.mt}}>{streak}</span>
+            </div>
+            {(()=>{const sc=Math.min(100,Math.round(todayChecks/5*100));const col=sc>=80?T.gr:sc>=40?T.yl:T.mt;return(
+              <div key={todayChecks} className="pop" style={{width:30,height:30,borderRadius:"50%",background:T.sfh,border:`2px solid ${col}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <span style={{fontSize:7,fontWeight:900,color:col,letterSpacing:"-.3px"}}>{sc}%</span>
+              </div>
+            );})()}
+          </div>
           <nav style={{display:"flex",gap:2}}>
             {[{id:"explore",l:"Parcours"},{id:"tree",l:"Mon Arbre"},{id:"daily",l:"Ma Journée"}].map(({id,l})=>(
               <button key={id} className="btn" onClick={()=>nav(id)} style={{padding:"4px 8px",borderRadius:99,fontSize:10,fontWeight:600,background:page===id?T.ac:"transparent",color:page===id?"#080808":T.mt}}>{l}</button>
@@ -625,7 +710,7 @@ const CareerPage = () => {
 
 // ━━━ MILESTONE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const MilestonePage = () => {
-  const {nav,selCareer,selMilestone,isMsDone,toggleMs} = useCtx();
+  const {nav,selCareer,selMilestone,isMsDone,toggleMs,bumpToday} = useCtx();
   const c = C[selCareer]; if(!c) return null;
   const m = c.ms[selMilestone]; if(!m) return null;
   const done = isMsDone(c.id, selMilestone);
@@ -663,7 +748,7 @@ const MilestonePage = () => {
         {/* Skills */}
         <Sec t="⭐ COMPÉTENCES DÉBLOQUÉES"><div style={{display:"flex",flexWrap:"wrap",gap:4}}>{(m.sku||[]).map((s,i)=><span key={i} className="tag" style={{background:c.c+"12",border:`1px solid ${c.c}22`,color:c.c}}>{s}</span>)}</div></Sec>
         {/* Complete */}
-        <button className="btn" onClick={()=>{toggleMs(c.id,selMilestone);nav("career",c.id);}} style={{width:"100%",padding:"12px",borderRadius:12,fontSize:13,fontWeight:700,background:done?"rgba(255,255,255,.04)":c.c,color:done?T.mt:"#080808",marginTop:8}}>{done?"↺ Non-terminé":"✓ Marquer terminé"}</button>
+        <button className="btn" onClick={(e)=>{if(!done){bumpToday();triggerCelebration(e.clientX,e.clientY);}toggleMs(c.id,selMilestone);nav("career",c.id);}} style={{width:"100%",padding:"12px",borderRadius:12,fontSize:13,fontWeight:700,background:done?"rgba(255,255,255,.04)":c.c,color:done?T.mt:"#080808",marginTop:8}}>{done?"↺ Non-terminé":"✓ Marquer terminé"}</button>
       </div>
     </div>
   );
@@ -775,7 +860,7 @@ const TreeCatalogPage = () => {
 
 // ━━━ TREE BRANCH DETAIL ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const TreeBranchPage = () => {
-  const {nav,selBranch,treeBranches,toggleTreeObj,isTreeObjDone,treeBranchProg,treeLevelProg,isTreeLevelUnlocked} = useCtx();
+  const {nav,selBranch,treeBranches,toggleTreeObj,isTreeObjDone,treeBranchProg,treeLevelProg,isTreeLevelUnlocked,bumpToday} = useCtx();
   const b = treeBranches.find(x=>x.id===selBranch?.id)||selBranch;
   if(!b) return null;
   const pct = treeBranchProg(b);
@@ -827,7 +912,7 @@ const TreeBranchPage = () => {
                     (level.objs||[]).map((obj,oi) => {
                       const checked = isTreeObjDone(b.id, obj);
                       return (
-                        <div key={oi} onClick={()=>toggleTreeObj(b.id,obj)} style={{display:"flex",gap:7,alignItems:"flex-start",padding:"7px 8px",background:checked?(b.color||T.pu)+"0a":T.sfh,border:`1px solid ${checked?(b.color||T.pu)+"28":T.bd}`,borderRadius:7,marginBottom:4,cursor:"pointer",transition:"all .15s"}}>
+                        <div key={oi} onClick={(e)=>{if(!checked){bumpToday();triggerCelebration(e.clientX,e.clientY);}toggleTreeObj(b.id,obj);}} style={{display:"flex",gap:7,alignItems:"flex-start",padding:"7px 8px",background:checked?(b.color||T.pu)+"0a":T.sfh,border:`1px solid ${checked?(b.color||T.pu)+"28":T.bd}`,borderRadius:7,marginBottom:4,cursor:"pointer",transition:"all .15s"}}>
                           <div style={{width:14,height:14,borderRadius:3,flexShrink:0,marginTop:1,background:checked?(b.color||T.pu):"transparent",border:`2px solid ${checked?(b.color||T.pu):T.sb}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:"#080808",fontWeight:900}}>{checked?"✓":""}</div>
                           <span style={{fontSize:11,color:checked?T.mt:T.tx,lineHeight:1.4,textDecoration:checked?"line-through":"none"}}>{obj}</span>
                         </div>

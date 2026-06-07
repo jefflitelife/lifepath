@@ -363,6 +363,13 @@ export default function LifePath() {
   const [streak,      setStreak]      = useState(() => loadLS().streak || 1);
   const [todayDate,   setTodayDate]   = useState(() => loadLS().todayDate || new Date().toISOString().slice(0,10));
   const [todayChecks, setTodayChecks] = useState(() => { const s=loadLS(),t=new Date().toISOString().slice(0,10); return s.todayDate===t?(s.todayChecks||0):0; });
+  // User profile & onboarding
+  const [userName,       setUserName]       = useState(() => loadLS().userName || "");
+  const [onboardingDone, setOnboardingDone] = useState(() => !!loadLS().onboardingDone);
+  const [activeDays,     setActiveDays]     = useState(() => loadLS().activeDays || 1);
+  // Compare
+  const [compareA, setCompareA] = useState(null);
+  const [compareB, setCompareB] = useState(null);
 
   const nav = (p, c, m) => { if(c!==undefined) setSelCareer(c); if(m!==undefined) setSelMilestone(m); setPage(p); };
   const notify = (msg) => { setNotification(msg); setTimeout(()=>setNotification(null), 3500); };
@@ -377,16 +384,18 @@ export default function LifePath() {
   };
 
   useEffect(() => {
-    saveLS({ completedMs, favorites, treeBranches, treeObjCompleted, streak, todayDate, todayChecks, lastVisit: new Date().toISOString().slice(0,10) });
-  }, [completedMs, favorites, treeBranches, treeObjCompleted, streak, todayDate, todayChecks]);
+    saveLS({ completedMs, favorites, treeBranches, treeObjCompleted, streak, todayDate, todayChecks, userName, onboardingDone, activeDays, lastVisit: new Date().toISOString().slice(0,10) });
+  }, [completedMs, favorites, treeBranches, treeObjCompleted, streak, todayDate, todayChecks, userName, onboardingDone, activeDays]);
 
   useEffect(() => {
     // ── Streak update on visit
     const saved = loadLS();
     const today = new Date().toISOString().slice(0,10);
     const yest  = new Date(Date.now()-864e5).toISOString().slice(0,10);
-    if(saved.lastVisit && saved.lastVisit!==today)
+    if(saved.lastVisit && saved.lastVisit!==today) {
       setStreak(saved.lastVisit===yest ? (saved.streak||1)+1 : 1);
+      setActiveDays((saved.activeDays||1)+1);
+    }
     if(saved.todayDate && saved.todayDate!==today){ setTodayDate(today); setTodayChecks(0); }
     // ── Browser notifications
     if(!("Notification" in window)) return;
@@ -452,7 +461,7 @@ export default function LifePath() {
     notify(`🌱 "${branch.title}" ajoutée !`);
   };
 
-  const ctx = {page,nav,selCareer,selMilestone,completedMs,toggleMs,isMsDone,getProgress,search,setSearch,cat,setCat,favorites,toggleFav,treeBranches,setTreeBranches,selBranch,setSelBranch,treeObjCompleted,toggleTreeObj,isTreeObjDone,treeBranchProg,treeLevelProg,isTreeLevelUnlocked,addTreeBranch,notification,notify,streak,todayChecks,bumpToday};
+  const ctx = {page,nav,selCareer,selMilestone,completedMs,toggleMs,isMsDone,getProgress,search,setSearch,cat,setCat,favorites,toggleFav,treeBranches,setTreeBranches,selBranch,setSelBranch,treeObjCompleted,toggleTreeObj,isTreeObjDone,treeBranchProg,treeLevelProg,isTreeLevelUnlocked,addTreeBranch,notification,notify,streak,todayChecks,bumpToday,userName,setUserName,onboardingDone,setOnboardingDone,activeDays,compareA,setCompareA,compareB,setCompareB};
 
   return (
     <Ctx.Provider value={ctx}>
@@ -473,46 +482,164 @@ export default function LifePath() {
         input:focus,textarea:focus,select:focus{outline:none;border-color:${T.ac}!important}
       `}</style>
       <div style={{minHeight:"100vh",background:T.bg}}>
-        {/* Notification */}
-        {notification&&<div style={{position:"fixed",top:12,left:"50%",transform:"translateX(-50%)",zIndex:999,background:T.sf,border:`1px solid ${T.ac}33`,borderRadius:12,padding:"10px 18px",fontSize:12,color:T.tx,fontWeight:600,boxShadow:"0 8px 32px rgba(0,0,0,.5)",animation:"slideIn .3s ease",maxWidth:340,textAlign:"center"}}>{notification}</div>}
-        {/* Nav */}
-        {page!=="home"&&<header style={{position:"fixed",inset:"0 0 auto",zIndex:100,height:50,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 12px",background:"rgba(7,7,9,.9)",backdropFilter:"blur(20px)",borderBottom:`1px solid ${T.bd}`}}>
-          <button className="btn" onClick={()=>nav("home")} style={{background:"none",display:"flex",alignItems:"center",gap:5,padding:0,color:T.tx}}>
-            <div style={{width:20,height:20,borderRadius:5,background:T.ac,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:900,color:"#080808"}}>L</div>
-            <span style={{fontFamily:T.fd,fontWeight:800,fontSize:14}}>LifePath</span>
-          </button>
-          <div style={{display:"flex",alignItems:"center",gap:7}}>
-            <div style={{display:"flex",alignItems:"center",gap:2}}>
-              <span className={streak>1?"fire":""} style={{fontSize:15,lineHeight:1}}>🔥</span>
-              <span style={{fontSize:12,fontWeight:800,color:streak>=7?T.ac:streak>=3?T.or:T.mt}}>{streak}</span>
-            </div>
-            {(()=>{const sc=Math.min(100,Math.round(todayChecks/5*100));const col=sc>=80?T.gr:sc>=40?T.yl:T.mt;return(
-              <div key={todayChecks} className="pop" style={{width:30,height:30,borderRadius:"50%",background:T.sfh,border:`2px solid ${col}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                <span style={{fontSize:7,fontWeight:900,color:col,letterSpacing:"-.3px"}}>{sc}%</span>
+        {notification&&<div style={{position:"fixed",top:12,left:"50%",transform:"translateX(-50%)",zIndex:9999,background:T.sf,border:`1px solid ${T.ac}33`,borderRadius:12,padding:"10px 18px",fontSize:12,color:T.tx,fontWeight:600,boxShadow:"0 8px 32px rgba(0,0,0,.5)",animation:"slideIn .3s ease",maxWidth:340,textAlign:"center"}}>{notification}</div>}
+        {!onboardingDone ? <OnboardingFlow/> : (<>
+          {page!=="home"&&<header style={{position:"fixed",inset:"0 0 auto",zIndex:100,height:50,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 12px",background:"rgba(7,7,9,.9)",backdropFilter:"blur(20px)",borderBottom:`1px solid ${T.bd}`}}>
+            <button className="btn" onClick={()=>nav("home")} style={{background:"none",display:"flex",alignItems:"center",gap:5,padding:0,color:T.tx}}>
+              <div style={{width:20,height:20,borderRadius:5,background:T.ac,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:900,color:"#080808"}}>L</div>
+              <span style={{fontFamily:T.fd,fontWeight:800,fontSize:14}}>LifePath</span>
+            </button>
+            <div style={{display:"flex",alignItems:"center",gap:7}}>
+              <div style={{display:"flex",alignItems:"center",gap:2}}>
+                <span className={streak>1?"fire":""} style={{fontSize:15,lineHeight:1}}>🔥</span>
+                <span style={{fontSize:12,fontWeight:800,color:streak>=7?T.ac:streak>=3?T.or:T.mt}}>{streak}</span>
               </div>
-            );})()}
+              {(()=>{const sc=Math.min(100,Math.round(todayChecks/5*100));const col=sc>=80?T.gr:sc>=40?T.yl:T.mt;return(
+                <div key={todayChecks} className="pop" style={{width:30,height:30,borderRadius:"50%",background:T.sfh,border:`2px solid ${col}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <span style={{fontSize:7,fontWeight:900,color:col,letterSpacing:"-.3px"}}>{sc}%</span>
+                </div>
+              );})()}
+            </div>
+            <nav style={{display:"flex",gap:2}}>
+              {[{id:"explore",l:"Parcours"},{id:"dashboard",l:"Stats"},{id:"tree",l:"Arbre"},{id:"daily",l:"Journée"}].map(({id,l})=>(
+                <button key={id} className="btn" onClick={()=>nav(id)} style={{padding:"4px 7px",borderRadius:99,fontSize:10,fontWeight:600,background:page===id?T.ac:"transparent",color:page===id?"#080808":T.mt}}>{l}</button>
+              ))}
+            </nav>
+          </header>}
+          <div key={page+selCareer+selMilestone+(selBranch?.id||"")} className="fu">
+            {page==="home"&&<HomePage/>}
+            {page==="explore"&&<ExplorePage/>}
+            {page==="career"&&<CareerPage/>}
+            {page==="milestone"&&<MilestonePage/>}
+            {page==="tree"&&<TreePage/>}
+            {page==="treebranch"&&<TreeBranchPage/>}
+            {page==="treecatalog"&&<TreeCatalogPage/>}
+            {page==="daily"&&<DailyPage/>}
+            {page==="dashboard"&&<DashboardPage/>}
+            {page==="compare"&&<ComparePage/>}
           </div>
-          <nav style={{display:"flex",gap:2}}>
-            {[{id:"explore",l:"Parcours"},{id:"dashboard",l:"Stats"},{id:"tree",l:"Arbre"},{id:"daily",l:"Journée"}].map(({id,l})=>(
-              <button key={id} className="btn" onClick={()=>nav(id)} style={{padding:"4px 7px",borderRadius:99,fontSize:10,fontWeight:600,background:page===id?T.ac:"transparent",color:page===id?"#080808":T.mt}}>{l}</button>
-            ))}
-          </nav>
-        </header>}
-        <div key={page+selCareer+selMilestone+(selBranch?.id||"")} className="fu">
-          {page==="home"&&<HomePage/>}
-          {page==="explore"&&<ExplorePage/>}
-          {page==="career"&&<CareerPage/>}
-          {page==="milestone"&&<MilestonePage/>}
-          {page==="tree"&&<TreePage/>}
-          {page==="treebranch"&&<TreeBranchPage/>}
-          {page==="treecatalog"&&<TreeCatalogPage/>}
-          {page==="daily"&&<DailyPage/>}
-          {page==="dashboard"&&<DashboardPage/>}
-        </div>
+        </>)}
       </div>
     </Ctx.Provider>
   );
 }
+
+// ━━━ ONBOARDING ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const ONBOARD_CAREER_IDS = ["fullstack","uxdesign","entrepreneur","dataanalyst","cybersecurite","infirmier","commercial","devops","datascientist","kine"];
+const OnboardingFlow = () => {
+  const {setUserName,setOnboardingDone,treeBranches,setTreeBranches,nav} = useCtx();
+  const [step, setStep]     = useState(1);
+  const [name, setNameVal]  = useState("");
+  const [selCId, setSelCId] = useState(null);
+  const [selB, setSelB]     = useState(null);
+
+  const careers = ONBOARD_CAREER_IDS.map(id=>C[id]).filter(Boolean);
+  const branches = [
+    {id:"sport_sante",     icon:"🏋️", title:"Sport & Santé",       color:T.gr,       levels:LIFE_BRANCHES.sport_sante.levels,             connections:LIFE_BRANCHES.sport_sante.connections||[]},
+    {id:"liberte_fin",     icon:"💰", title:"Liberté financière",   color:T.yl,       levels:LIFE_BRANCHES.liberte_financiere.levels,      connections:LIFE_BRANCHES.liberte_financiere.connections||[]},
+    {id:"creativite_ecr",  icon:"📝", title:"Écrire un roman",      color:"#8B5CF6",  levels:LIFE_BRANCHES.creativite.variants.ecriture.levels, connections:[]},
+    {id:"parentalite",     icon:"👨‍👧‍👦", title:"Meilleur parent",    color:T.pk,       levels:LIFE_BRANCHES.parentalite.levels,             connections:LIFE_BRANCHES.parentalite.connections||[]},
+    {id:"ecologie",        icon:"🌍", title:"Impact écologique",    color:"#059669",  levels:LIFE_BRANCHES.ecologie.levels,                connections:LIFE_BRANCHES.ecologie.connections||[]},
+    {id:"arret_tabac",     icon:"🚭", title:"Arrêter de fumer",     color:"#EF4444",  levels:LIFE_BRANCHES.arret_tabac.levels,             connections:LIFE_BRANCHES.arret_tabac.connections||[]},
+  ];
+
+  const complete = (skipBranch=false) => {
+    const n = name.trim() || "toi";
+    setUserName(n);
+    setOnboardingDone(true);
+    if(!skipBranch && selB && !treeBranches.find(b=>b.id===selB.id))
+      setTreeBranches(prev=>[...prev, selB]);
+    if(selCId) nav("career", selCId); else nav("home");
+  };
+
+  const Dots = () => (
+    <div style={{display:"flex",gap:5,alignItems:"center"}}>
+      {[1,2,3].map(i=><div key={i} style={{width:i===step?20:6,height:6,borderRadius:99,background:i===step?T.ac:i<step?T.ac+"60":T.sb,transition:"all .3s"}}/>)}
+    </div>
+  );
+
+  const baseStyle = {minHeight:"100vh",background:T.bg,padding:"28px 22px 80px",maxWidth:540,margin:"0 auto",boxSizing:"border-box"};
+
+  if(step===1) return (
+    <div style={baseStyle}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:52}}>
+        <div style={{width:28,height:28,borderRadius:7,background:T.ac,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:900,color:"#080808"}}>L</div>
+        <span style={{fontFamily:T.fd,fontWeight:800,fontSize:18}}>LifePath</span>
+      </div>
+      <Dots/>
+      <h1 style={{fontFamily:T.fd,fontSize:32,fontWeight:800,letterSpacing:"-1.5px",lineHeight:1.05,margin:"28px 0 10px"}}>Bienvenue sur<br/>LifePath 🌱</h1>
+      <p style={{color:T.mt,fontSize:14,lineHeight:1.7,marginBottom:36}}>Ton GPS pour construire la carrière et la vie que tu veux vraiment vivre.</p>
+      <label style={{fontSize:10,color:T.mt,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:8,display:"block"}}>Ton prénom</label>
+      <input autoFocus value={name} onChange={e=>setNameVal(e.target.value)}
+        onKeyDown={e=>e.key==="Enter"&&name.trim()&&setStep(2)}
+        placeholder="Entre ton prénom..."
+        style={{width:"100%",background:T.sf,border:`1px solid ${name.trim()?T.ac:T.bd}`,borderRadius:12,padding:"14px 16px",fontSize:15,color:T.tx,fontFamily:T.fb,marginBottom:20,transition:"border-color .2s"}}/>
+      <button className="btn" onClick={()=>name.trim()&&setStep(2)} disabled={!name.trim()}
+        style={{background:name.trim()?T.ac:"rgba(255,255,255,.05)",color:name.trim()?"#080808":T.mt,borderRadius:14,padding:"15px",fontSize:15,fontWeight:700,width:"100%",boxShadow:name.trim()?`0 4px 24px ${T.acg}`:"none",transition:"all .2s"}}>
+        Continuer →
+      </button>
+    </div>
+  );
+
+  if(step===2) return (
+    <div style={{...baseStyle,paddingTop:24}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:28}}>
+        <button className="btn" onClick={()=>setStep(1)} style={{background:"none",color:T.mt,fontSize:12,fontWeight:600,padding:0}}>← Retour</button>
+        <Dots/>
+      </div>
+      <h1 style={{fontFamily:T.fd,fontSize:24,fontWeight:800,letterSpacing:"-1px",marginBottom:4}}>Parfait, {name} ! 👋</h1>
+      <p style={{color:T.mt,fontSize:13,marginBottom:18}}>Quel parcours professionnel t'attire le plus ?</p>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:20}}>
+        {careers.map(c=>{
+          const sel=selCId===c.id;
+          return (
+            <div key={c.id} onClick={()=>setSelCId(sel?null:c.id)} className="card"
+              style={{background:sel?c.c+"18":T.sf,border:`2px solid ${sel?c.c:T.bd}`,borderRadius:14,padding:"14px 12px",cursor:"pointer",transition:"all .15s"}}>
+              <div style={{fontSize:26,marginBottom:6}}>{c.e}</div>
+              <div style={{fontFamily:T.fd,fontSize:11,fontWeight:700,lineHeight:1.25,marginBottom:4}}>{c.t}</div>
+              <div style={{fontSize:9,color:T.mt}}>{c.dur}</div>
+              <div style={{fontSize:9,color:c.c,fontWeight:700}}>{c.sal.s}</div>
+            </div>
+          );
+        })}
+      </div>
+      <button className="btn" onClick={()=>selCId&&setStep(3)} disabled={!selCId}
+        style={{background:selCId?T.ac:"rgba(255,255,255,.05)",color:selCId?"#080808":T.mt,borderRadius:14,padding:"14px",fontSize:14,fontWeight:700,width:"100%",boxShadow:selCId?`0 4px 24px ${T.acg}`:"none",transition:"all .2s"}}>
+        Choisir ce parcours →
+      </button>
+    </div>
+  );
+
+  return (
+    <div style={{...baseStyle,paddingTop:24}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:28}}>
+        <button className="btn" onClick={()=>setStep(2)} style={{background:"none",color:T.mt,fontSize:12,fontWeight:600,padding:0}}>← Retour</button>
+        <Dots/>
+      </div>
+      <h1 style={{fontFamily:T.fd,fontSize:24,fontWeight:800,letterSpacing:"-1px",marginBottom:4}}>Dernière étape ! 🎯</h1>
+      <p style={{color:T.mt,fontSize:13,marginBottom:18}}>Ta première branche de vie à développer en parallèle.</p>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:20}}>
+        {branches.map(b=>{
+          const sel=selB?.id===b.id;
+          return (
+            <div key={b.id} onClick={()=>setSelB(sel?null:b)} className="card"
+              style={{background:sel?(b.color||T.pu)+"18":T.sf,border:`2px solid ${sel?(b.color||T.pu):T.bd}`,borderRadius:14,padding:"14px 12px",cursor:"pointer",transition:"all .15s"}}>
+              <div style={{fontSize:28,marginBottom:6}}>{b.icon}</div>
+              <div style={{fontFamily:T.fd,fontSize:11,fontWeight:700,lineHeight:1.25}}>{b.title}</div>
+            </div>
+          );
+        })}
+      </div>
+      <button className="btn" onClick={()=>selB&&complete()} disabled={!selB}
+        style={{background:selB?T.ac:"rgba(255,255,255,.05)",color:selB?"#080808":T.mt,borderRadius:14,padding:"14px",fontSize:14,fontWeight:700,width:"100%",boxShadow:selB?`0 4px 24px ${T.acg}`:"none",transition:"all .2s",marginBottom:8}}>
+        🚀 Lancer LifePath
+      </button>
+      <button className="btn" onClick={()=>complete(true)} style={{background:"none",color:T.mt,fontSize:12,padding:"8px",width:"100%"}}>
+        Passer cette étape →
+      </button>
+    </div>
+  );
+};
 
 // ━━━ HOME ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const HomePage = () => {

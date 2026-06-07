@@ -1058,34 +1058,86 @@ const MilestonePage = () => {
 
 // ━━━ TREE PAGE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const TreePage = () => {
-  const {nav,treeBranches,setSelBranch,treeBranchProg} = useCtx();
+  const {nav,treeBranches,setSelBranch,treeBranchProg,isTreeObjDone,notify} = useCtx();
   const totalObj = treeBranches.reduce((s,b)=>{let t=0;(b.levels||[]).forEach(l=>t+=(l.objs||[]).length);return s+t;},0);
+  const totalObjDone = treeBranches.reduce((s,b)=>{
+    let d=0; (b.levels||[]).forEach(l=>(l.objs||[]).forEach(o=>{if(isTreeObjDone(b.id,o))d++;})); return s+d;
+  },0);
+  const globalPct = totalObj>0?Math.round(totalObjDone/totalObj*100):0;
+  const synergies = [];
+  treeBranches.forEach(b=>(b.connections||[]).forEach(conn=>{
+    const target=treeBranches.find(x=>x.id===conn.to);
+    if(target) synergies.push({from:b,to:target,effect:conn.effect});
+  }));
+  const shareTree = () => {
+    const lines=[`🌳 Mon Arbre de Vie LifePath`,`Progression globale : ${globalPct}%`,``];
+    treeBranches.forEach(b=>lines.push(`${b.icon} ${b.title} — ${treeBranchProg(b)}%`));
+    if(synergies.length>0){lines.push(``);lines.push(`🔗 Synergies :`);synergies.forEach(s=>lines.push(`  ${s.from.title} → ${s.to.title} : ${s.effect}`));}
+    navigator.clipboard?.writeText(lines.join("\n")).then(()=>notify("Copié dans le presse-papiers !")).catch(()=>notify("Copier manuellement"));
+  };
   return (
     <div style={{paddingTop:66,minHeight:"100vh"}}>
       <div style={{maxWidth:540,margin:"0 auto",padding:"16px 18px 80px"}}>
-        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
           <span style={{fontSize:28}}>🌳</span>
-          <div><h1 style={{fontFamily:T.fd,fontSize:22,fontWeight:800,letterSpacing:"-1px"}}>Mon Arbre de Vie</h1>
-          <p style={{fontSize:11,color:T.mt}}>{treeBranches.length} branches · {totalObj} objectifs</p></div>
+          <div style={{flex:1}}>
+            <h1 style={{fontFamily:T.fd,fontSize:22,fontWeight:800,letterSpacing:"-1px"}}>Mon Arbre de Vie</h1>
+            <p style={{fontSize:11,color:T.mt}}>{treeBranches.length} branches · {totalObj} objectifs</p>
+          </div>
+          {treeBranches.length>0&&<div style={{textAlign:"right"}}>
+            <div style={{fontSize:22,fontWeight:800,fontFamily:T.fd,color:globalPct>=50?T.ac:T.mt}}>{globalPct}%</div>
+            <div style={{fontSize:9,color:T.mt}}>global</div>
+          </div>}
         </div>
-        {treeBranches.length===0&&<div style={{background:T.sf,border:`1px dashed ${T.bd}`,borderRadius:16,padding:"36px 18px",textAlign:"center",marginBottom:14}}><span style={{fontSize:36}}>🌱</span><p style={{fontSize:13,color:T.mt,marginTop:8}}>Ton arbre est vide</p><p style={{fontSize:11,color:T.sb}}>Ajoute ta première branche</p></div>}
+        {treeBranches.length>0&&<div style={{marginBottom:14}}>
+          <div style={{height:5,background:T.sb,borderRadius:99,marginBottom:4}}>
+            <div style={{height:"100%",width:`${globalPct}%`,background:T.ac,borderRadius:99,transition:"width .4s",boxShadow:`0 0 8px ${T.ac}44`}}/>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between"}}>
+            <span style={{fontSize:9,color:T.mt}}>{totalObjDone}/{totalObj} objectifs accomplis</span>
+            {synergies.length>0&&<span className="tag" style={{background:T.ord,color:T.or,fontSize:8}}>🔗 {synergies.length} synergie{synergies.length>1?"s":""} active{synergies.length>1?"s":""}</span>}
+          </div>
+        </div>}
+        {treeBranches.length===0&&<div style={{background:T.sf,border:`1px dashed ${T.bd}`,borderRadius:16,padding:"36px 18px",textAlign:"center",marginBottom:14}}>
+          <span style={{fontSize:36}}>🌱</span>
+          <p style={{fontSize:13,color:T.mt,marginTop:8}}>Ton arbre est vide</p>
+          <p style={{fontSize:11,color:T.sb}}>Ajoute ta première branche</p>
+        </div>}
         {treeBranches.map((b,i) => {
           const pct = treeBranchProg(b);
           return (
-            <div key={b.id} className="fu card" onClick={()=>{setSelBranch(b);nav("treebranch");}} style={{background:T.sf,border:`1px solid ${T.bd}`,borderRadius:14,padding:"12px",marginBottom:7,cursor:"pointer",borderLeft:`3px solid ${b.color||T.pu}44`,animationDelay:`${i*.04}s`}}>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <div style={{width:38,height:38,borderRadius:9,background:(b.color||T.pu)+"18",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>{b.icon}</div>
+            <div key={b.id} className="fu card" onClick={()=>{setSelBranch(b);nav("treebranch");}} style={{background:T.sf,border:`1px solid ${(b.color||T.pu)+"28"}`,borderRadius:14,padding:"14px",marginBottom:8,cursor:"pointer",borderLeft:`3px solid ${b.color||T.pu}`,animationDelay:`${i*.04}s`}}>
+              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                <div style={{width:46,height:46,borderRadius:11,background:(b.color||T.pu)+"1a",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{b.icon}</div>
                 <div style={{flex:1}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontSize:13,fontWeight:700,fontFamily:T.fd}}>{b.title}</span><span style={{fontSize:11,color:b.color||T.pu,fontWeight:700}}>{pct}%</span></div>
-                  <div style={{height:3,background:T.sb,borderRadius:99}}><div style={{height:"100%",width:`${pct}%`,background:b.color||T.pu,borderRadius:99}}/></div>
-                  {(b.connections||[]).length>0&&treeBranches.some(x=>(b.connections||[]).some(c=>c.to===x.id))&&<span className="tag" style={{background:T.ord,color:T.or,fontSize:8,marginTop:4}}>🔗 {(b.connections||[]).filter(c=>treeBranches.some(x=>x.id===c.to)).length} liens</span>}
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                    <span style={{fontSize:14,fontWeight:700,fontFamily:T.fd}}>{b.title}</span>
+                    <span style={{fontSize:12,color:b.color||T.pu,fontWeight:800}}>{pct}%</span>
+                  </div>
+                  <div style={{height:4,background:T.sb,borderRadius:99}}>
+                    <div style={{height:"100%",width:`${pct}%`,background:b.color||T.pu,borderRadius:99,boxShadow:pct>0?`0 0 6px ${b.color||T.pu}55`:""}}/>
+                  </div>
+                  {(b.connections||[]).filter(c=>treeBranches.some(x=>x.id===c.to)).length>0&&
+                    <span className="tag" style={{background:T.ord,color:T.or,fontSize:8,marginTop:4}}>🔗 {(b.connections||[]).filter(c=>treeBranches.some(x=>x.id===c.to)).length} lien{(b.connections||[]).filter(c=>treeBranches.some(x=>x.id===c.to)).length>1?"s":""} actif{(b.connections||[]).filter(c=>treeBranches.some(x=>x.id===c.to)).length>1?"s":""}</span>}
                 </div>
-                <span style={{color:T.mt,fontSize:14}}>›</span>
+                <span style={{color:T.mt,fontSize:16}}>›</span>
               </div>
             </div>
           );
         })}
-        <button className="btn" onClick={()=>nav("treevisual")} style={{width:"100%",background:"rgba(200,255,0,0.08)",border:`1px solid ${T.ac}44`,borderRadius:12,padding:"14px",fontSize:13,fontWeight:700,color:T.ac,marginTop:8,fontFamily:T.fd,letterSpacing:"-0.3px"}}>✦ Mode Immersif</button>
+        {synergies.length>0&&<div style={{background:T.sf,border:`1px solid ${T.or}22`,borderRadius:14,padding:"12px 14px",marginBottom:8}}>
+          <p style={{fontSize:9,color:T.or,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:8}}>🔗 SYNERGIES ACTIVES</p>
+          {synergies.map((s,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:6,marginBottom:i<synergies.length-1?5:0,fontSize:11}}>
+              <span>{s.from.icon}</span>
+              <span style={{color:T.mt,fontSize:9}}>→</span>
+              <span>{s.to.icon}</span>
+              <span style={{color:T.mt,flex:1,fontSize:10}}>{s.effect}</span>
+            </div>
+          ))}
+        </div>}
+        {treeBranches.length>0&&<button className="btn" onClick={shareTree} style={{width:"100%",background:T.sf,border:`1px solid ${T.bd}`,borderRadius:12,padding:"12px",fontSize:12,fontWeight:600,color:T.tx,marginBottom:8}}>🔗 Partager mon arbre</button>}
+        <button className="btn" onClick={()=>nav("treevisual")} style={{width:"100%",background:"rgba(200,255,0,0.08)",border:`1px solid ${T.ac}44`,borderRadius:12,padding:"14px",fontSize:13,fontWeight:700,color:T.ac,marginTop:4,fontFamily:T.fd,letterSpacing:"-0.3px"}}>✦ Mode Immersif</button>
         <button className="btn" onClick={()=>nav("treecatalog")} style={{width:"100%",background:T.sf,border:`1px solid ${T.bd}`,borderRadius:12,padding:"14px",fontSize:13,fontWeight:600,color:T.tx,marginTop:8}}>📚 Ajouter une branche</button>
       </div>
     </div>

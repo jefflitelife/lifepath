@@ -1,4 +1,5 @@
 import { useState, useEffect, createContext, useContext } from "react";
+import TreeVisual from "./TreeVisual";
 
 // ━━━ TOKENS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const T={bg:"#070709",sf:"#0f0f12",sfh:"#16161b",bd:"rgba(255,255,255,0.07)",tx:"#EEEAE0",mt:"#5a5a6e",sb:"#2e2e38",ac:"#C8FF00",acd:"rgba(200,255,0,0.10)",acg:"rgba(200,255,0,0.22)",bl:"#4D9FFF",gr:"#22C55E",grd:"rgba(34,197,94,0.10)",or:"#FF7A3D",ord:"rgba(255,122,61,0.10)",pu:"#A855F7",pud:"rgba(168,85,247,0.10)",rd:"#FF4D4D",yl:"#F59E0B",pk:"#EC4899",sl:"#64748B",nv:"#1E40AF",fd:"'Syne',sans-serif",fb:"'DM Sans',sans-serif"};
@@ -517,6 +518,7 @@ export default function LifePath() {
             {page==="daily"&&<DailyPage/>}
             {page==="dashboard"&&<DashboardPage/>}
             {page==="compare"&&<ComparePage/>}
+            {page==="treevisual"&&<TreeVisual onBack={()=>nav("tree")}/>}
           </div>
         </>)}
       </div>
@@ -957,6 +959,7 @@ const TreePage = () => {
             </div>
           );
         })}
+        <button className="btn" onClick={()=>nav("treevisual")} style={{width:"100%",background:"rgba(200,255,0,0.08)",border:`1px solid ${T.ac}44`,borderRadius:12,padding:"14px",fontSize:13,fontWeight:700,color:T.ac,marginTop:8,fontFamily:T.fd,letterSpacing:"-0.3px"}}>✦ Mode Immersif</button>
         <button className="btn" onClick={()=>nav("treecatalog")} style={{width:"100%",background:T.sf,border:`1px solid ${T.bd}`,borderRadius:12,padding:"14px",fontSize:13,fontWeight:600,color:T.tx,marginTop:8}}>📚 Ajouter une branche</button>
       </div>
     </div>

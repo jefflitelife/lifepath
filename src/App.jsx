@@ -678,16 +678,41 @@ const HomePage = () => {
 
 // ━━━ EXPLORE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const ExplorePage = () => {
-  const {nav,search,setSearch,cat,setCat,getProgress,favorites,toggleFav} = useCtx();
+  const {nav,search,setSearch,cat,setCat,getProgress,favorites,toggleFav,compareA,setCompareA,compareB,setCompareB} = useCtx();
   let filtered = CAREER_LIST.filter(c => {
     const ms = c.t.toLowerCase().includes(search.toLowerCase()) || c.tag.toLowerCase().includes(search.toLowerCase());
     return ms && (cat==="all" || c.cat===cat);
   });
+
+  const handleCompare = (e, c) => {
+    e.stopPropagation();
+    if(!compareA) {
+      setCompareA(c); setCompareB(null);
+    } else if(compareA.id===c.id) {
+      setCompareA(null); setCompareB(null);
+    } else {
+      setCompareB(c); nav("compare");
+    }
+  };
+
   return (
     <div style={{paddingTop:66,minHeight:"100vh"}}>
       <div style={{maxWidth:540,margin:"0 auto",padding:"16px 18px 80px"}}>
         <h1 style={{fontFamily:T.fd,fontSize:22,fontWeight:800,letterSpacing:"-1px",marginBottom:4}}>Parcours</h1>
         <p style={{color:T.mt,fontSize:12,marginBottom:12}}>30 feuilles de route détaillées</p>
+
+        {/* Compare banner */}
+        {compareA&&!compareB&&(
+          <div style={{background:`${T.bl}12`,border:`1px solid ${T.bl}30`,borderRadius:10,padding:"10px 12px",marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:16}}>{compareA.e}</span>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:10,fontWeight:700,color:T.bl}}>⚖ Comparaison</div>
+              <div style={{fontSize:10,color:T.mt,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{compareA.t} — sélectionne un 2e parcours</div>
+            </div>
+            <button className="btn" onClick={()=>{setCompareA(null);setCompareB(null);}} style={{background:"none",fontSize:12,color:T.mt,padding:4}}>✕</button>
+          </div>
+        )}
+
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher..." style={{width:"100%",background:T.sf,border:`1px solid ${T.bd}`,borderRadius:8,padding:"9px 12px",fontSize:12,color:T.tx,fontFamily:T.fb,marginBottom:8}}/>
         <div style={{display:"flex",gap:4,marginBottom:12,flexWrap:"wrap",overflowX:"auto"}}>
           {CATS.map(c=><button key={c.v} className="btn" onClick={()=>setCat(c.v)} style={{padding:"3px 8px",borderRadius:99,fontSize:10,fontWeight:600,background:cat===c.v?T.ac:T.sf,color:cat===c.v?"#080808":T.mt,border:`1px solid ${cat===c.v?T.ac:T.bd}`,whiteSpace:"nowrap"}}>{c.i} {c.l}</button>)}
@@ -695,8 +720,9 @@ const ExplorePage = () => {
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
           {filtered.map((c,i) => {
             const p=getProgress(c.id);const fav=favorites.includes(c.id);
+            const isA = compareA?.id===c.id;
             return(
-              <div key={c.id} className="fu card" style={{background:T.sf,border:`1px solid ${T.bd}`,borderRadius:14,padding:"12px",borderLeft:`3px solid ${c.c}33`,animationDelay:`${i*.03}s`,cursor:"pointer"}} onClick={()=>nav("career",c.id)}>
+              <div key={c.id} className="fu card" style={{background:T.sf,border:`1px solid ${isA?T.bl+"60":T.bd}`,borderRadius:14,padding:"12px",borderLeft:`3px solid ${isA?T.bl:c.c+"33"}`,animationDelay:`${i*.03}s`,cursor:"pointer"}} onClick={()=>nav("career",c.id)}>
                 <div style={{display:"flex",gap:8,alignItems:"center"}}>
                   <div style={{width:36,height:36,borderRadius:8,background:c.c+"18",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0}}>{c.e}</div>
                   <div style={{flex:1,minWidth:0}}>
@@ -708,7 +734,10 @@ const ExplorePage = () => {
                     </div>
                     {p>0&&<div style={{height:2,background:T.sb,borderRadius:99,marginTop:4}}><div style={{height:"100%",width:`${p}%`,background:c.c,borderRadius:99}}/></div>}
                   </div>
-                  <button className="btn" onClick={e=>{e.stopPropagation();toggleFav(c.id);}} style={{background:"none",fontSize:13,padding:2,color:fav?T.ac:T.sb}}>{fav?"★":"☆"}</button>
+                  <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"center"}}>
+                    <button className="btn" onClick={e=>{e.stopPropagation();toggleFav(c.id);}} style={{background:"none",fontSize:13,padding:2,color:fav?T.ac:T.sb}}>{fav?"★":"☆"}</button>
+                    <button className="btn" onClick={e=>handleCompare(e,c)} title="Comparer" style={{background:isA?T.bl+"20":"none",border:isA?`1px solid ${T.bl}40`:"none",borderRadius:4,fontSize:11,padding:"1px 3px",color:isA?T.bl:T.mt,fontWeight:isA?700:400}}>⚖</button>
+                  </div>
                 </div>
               </div>
             );
@@ -1117,11 +1146,15 @@ const DailyPage = () => {
 // ━━━ HELPERS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ━━━ DASHBOARD ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const DashboardPage = () => {
-  const {nav,completedMs,favorites,treeBranches,streak,todayChecks,getProgress,treeBranchProg,isMsDone} = useCtx();
+  const {nav,completedMs,favorites,treeBranches,treeObjCompleted,streak,todayChecks,getProgress,treeBranchProg,isMsDone,userName,activeDays} = useCtx();
   const ctxB = {completedMs,favorites,treeBranches,streak,todayChecks,getProgress};
 
-  const totalMsDone = Object.values(completedMs).filter(Boolean).length;
-  const totalMs     = CAREER_LIST.reduce((s,c)=>s+c.ms.length,0);
+  const totalMsDone   = Object.values(completedMs).filter(Boolean).length;
+  const totalMs       = CAREER_LIST.reduce((s,c)=>s+c.ms.length,0);
+  const totalObjDone  = Object.values(treeObjCompleted).filter(Boolean).length;
+  const scoreToday    = Math.min(100,Math.round(todayChecks/5*100));
+  const scoreCol      = scoreToday>=80?T.gr:scoreToday>=40?T.yl:T.mt;
+  const streakCol     = streak>=7?T.ac:streak>=3?T.or:T.mt;
 
   const unlockedSkills = new Set();
   Object.entries(completedMs).forEach(([key,done])=>{
@@ -1131,29 +1164,60 @@ const DashboardPage = () => {
   });
 
   const activeCareers = CAREER_LIST.filter(c=>getProgress(c.id)>0).sort((a,b)=>getProgress(b.id)-getProgress(a.id));
-  const earnedCount   = BADGES.filter(b=>b.check(ctxB)).length;
+  const earnedBadges  = BADGES.filter(b=>b.check(ctxB));
   const today = new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
 
   return (
     <div style={{paddingTop:66,minHeight:"100vh"}}>
       <div style={{maxWidth:540,margin:"0 auto",padding:"16px 18px 80px"}}>
 
-        {/* Header */}
-        <h1 style={{fontFamily:T.fd,fontSize:22,fontWeight:800,letterSpacing:"-1px",marginBottom:2}}>Mon Dashboard</h1>
-        <p style={{color:T.mt,fontSize:11,marginBottom:18,textTransform:"capitalize"}}>{today}</p>
+        {/* Welcome */}
+        <div style={{marginBottom:20}}>
+          <h1 style={{fontFamily:T.fd,fontSize:22,fontWeight:800,letterSpacing:"-1px",marginBottom:2}}>
+            {userName ? `Bonjour, ${userName} 👋` : "Mon Dashboard"}
+          </h1>
+          <p style={{color:T.mt,fontSize:11,textTransform:"capitalize"}}>{today}</p>
+        </div>
 
-        {/* 4 KPI cards */}
+        {/* Hero : streak + score du jour */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
+          {/* Streak */}
+          <div style={{background:streak>=3?`${streakCol}0d`:T.sf,border:`1px solid ${streak>=3?streakCol+"30":T.bd}`,borderRadius:16,padding:"18px 16px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4}}>
+            <span className={streak>1?"fire":""} style={{fontSize:28,lineHeight:1}}>🔥</span>
+            <div style={{fontFamily:T.fd,fontSize:40,fontWeight:900,color:streakCol,lineHeight:1}}>{streak}</div>
+            <div style={{fontSize:9,color:T.mt,fontWeight:700,textTransform:"uppercase",letterSpacing:".8px",textAlign:"center"}}>jour{streak>1?"s":""} de streak</div>
+            {streak>=3&&<span className="tag" style={{background:streakCol+"20",color:streakCol,fontSize:8,marginTop:2}}>{streak>=30?"💎 Invincible":streak>=7?"🏅 Semaine de feu":"🔥 En feu"}</span>}
+          </div>
+          {/* Score du jour */}
+          <div style={{background:T.sf,border:`1px solid ${T.bd}`,borderRadius:16,padding:"18px 16px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6}}>
+            <div style={{position:"relative",width:72,height:72}}>
+              <svg width="72" height="72" style={{transform:"rotate(-90deg)"}}>
+                <circle cx="36" cy="36" r="30" fill="none" stroke={T.sb} strokeWidth="5"/>
+                <circle cx="36" cy="36" r="30" fill="none" stroke={scoreCol} strokeWidth="5"
+                  strokeDasharray={`${188.5*scoreToday/100} 188.5`}
+                  strokeLinecap="round" style={{transition:"stroke-dasharray .6s ease"}}/>
+              </svg>
+              <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <span style={{fontFamily:T.fd,fontSize:16,fontWeight:900,color:scoreCol}}>{scoreToday}%</span>
+              </div>
+            </div>
+            <div style={{fontSize:9,color:T.mt,fontWeight:700,textTransform:"uppercase",letterSpacing:".8px",textAlign:"center"}}>Score du jour</div>
+            <div style={{fontSize:8,color:T.mt}}>{todayChecks} action{todayChecks>1?"s":""} aujourd'hui</div>
+          </div>
+        </div>
+
+        {/* 4 stats */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:20}}>
           {[
-            {v:streak,                      l:"Streak",   icon:"🔥", col:streak>=7?T.ac:streak>=3?T.or:T.mt},
-            {v:`${totalMsDone}/${totalMs}`,  l:"Étapes",  icon:"📈", col:T.bl},
-            {v:unlockedSkills.size,          l:"Skills",  icon:"⭐", col:T.pu},
-            {v:treeBranches.length,          l:"Branches",icon:"🌳", col:T.gr},
+            {v:totalMsDone,        l:"Jalons",    icon:"📈", col:T.bl},
+            {v:totalObjDone,       l:"Objectifs", icon:"✅", col:T.gr},
+            {v:activeDays,         l:"Jours actifs",icon:"📅",col:T.or},
+            {v:unlockedSkills.size,l:"Skills",    icon:"⭐", col:T.pu},
           ].map(({v,l,icon,col},i)=>(
             <div key={i} style={{background:T.sf,border:`1px solid ${T.bd}`,borderRadius:12,padding:"10px 6px",textAlign:"center"}}>
-              <div style={{fontSize:13,marginBottom:3}}>{icon}</div>
-              <div style={{fontFamily:T.fd,fontSize:typeof v==="string"?10:14,fontWeight:800,color:col,lineHeight:1}}>{v}</div>
-              <div style={{fontSize:8,color:T.mt,marginTop:3}}>{l}</div>
+              <div style={{fontSize:12,marginBottom:3}}>{icon}</div>
+              <div style={{fontFamily:T.fd,fontSize:14,fontWeight:800,color:col,lineHeight:1}}>{v}</div>
+              <div style={{fontSize:7,color:T.mt,marginTop:3,lineHeight:1.2}}>{l}</div>
             </div>
           ))}
         </div>
@@ -1162,16 +1226,16 @@ const DashboardPage = () => {
         <div style={{marginBottom:20}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
             <h2 style={{fontSize:9,color:T.mt,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase"}}>🏅 BADGES</h2>
-            <span style={{fontSize:9,color:T.ac,fontWeight:800}}>{earnedCount}/{BADGES.length} débloqués</span>
+            <span style={{fontSize:9,color:T.ac,fontWeight:800}}>{earnedBadges.length}/{BADGES.length} débloqués</span>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6}}>
             {BADGES.map((b,i)=>{
               const earned = b.check(ctxB);
               return (
-                <div key={b.id} className={earned?"fu":""} style={{background:earned?`${T.ac}09`:T.sf,border:`1px solid ${earned?T.ac+"30":T.bd}`,borderRadius:10,padding:"10px 8px",textAlign:"center",opacity:earned?1:.35,transition:"opacity .2s",animationDelay:`${i*.03}s`}}>
+                <div key={b.id} className={earned?"fu":""} style={{background:earned?`${T.ac}09`:T.sf,border:`1px solid ${earned?T.ac+"30":T.bd}`,borderRadius:10,padding:"10px 8px",textAlign:"center",opacity:earned?1:.33,animationDelay:`${i*.03}s`}}>
                   <div style={{fontSize:20,marginBottom:4,filter:earned?"none":"grayscale(100%)"}}>{b.icon}</div>
                   <div style={{fontSize:9,fontWeight:700,color:earned?T.ac:T.mt,marginBottom:2}}>{b.name}</div>
-                  <div style={{fontSize:8,color:T.mt,lineHeight:1.3}}>{b.desc}</div>
+                  <div style={{fontSize:7,color:T.mt,lineHeight:1.3}}>{b.desc}</div>
                 </div>
               );
             })}
@@ -1182,7 +1246,7 @@ const DashboardPage = () => {
         <div style={{marginBottom:20}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
             <h2 style={{fontSize:9,color:T.mt,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase"}}>📚 MES PARCOURS</h2>
-            {activeCareers.length>0&&<button className="btn" onClick={()=>nav("explore")} style={{fontSize:9,color:T.ac,background:"none",padding:0,fontWeight:700}}>+ Explorer</button>}
+            <button className="btn" onClick={()=>nav("explore")} style={{fontSize:9,color:T.ac,background:"none",padding:0,fontWeight:700}}>+ Explorer</button>
           </div>
           {activeCareers.length===0 ? (
             <div style={{background:T.sf,border:`1px dashed ${T.bd}`,borderRadius:12,padding:"22px",textAlign:"center"}}>
@@ -1207,7 +1271,7 @@ const DashboardPage = () => {
                       <div style={{height:"100%",width:`${p}%`,background:p===100?T.gr:c.c,borderRadius:99,transition:"width .4s"}}/>
                     </div>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                      <span style={{fontSize:9,color:T.mt}}>{doneCount}/{c.ms.length} étapes</span>
+                      <span style={{fontSize:9,color:T.mt}}>{doneCount}/{c.ms.length} jalons</span>
                       {curMs&&p<100&&<span className="tag" style={{background:c.c+"14",color:c.c,fontSize:8}}>{curMs.i} {curMs.p}</span>}
                       {p===100&&<span className="tag" style={{background:T.grd,color:T.gr,fontSize:8}}>Terminé ✓</span>}
                     </div>
@@ -1244,7 +1308,7 @@ const DashboardPage = () => {
           </div>
         )}
 
-        {/* Barre progression globale */}
+        {/* Progression globale */}
         {totalMsDone>0&&(
           <div style={{background:T.sf,border:`1px solid ${T.bd}`,borderRadius:12,padding:"14px"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
@@ -1255,11 +1319,162 @@ const DashboardPage = () => {
               <div style={{height:"100%",width:`${Math.round(totalMsDone/totalMs*100)}%`,background:`linear-gradient(90deg,${T.ac}88,${T.ac})`,borderRadius:99,transition:"width .4s"}}/>
             </div>
             <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
-              <span style={{fontSize:9,color:T.mt}}>{totalMsDone} étape{totalMsDone>1?"s":""} terminée{totalMsDone>1?"s":""}</span>
-              <span style={{fontSize:9,color:T.mt}}>{totalMs-totalMsDone} restante{totalMs-totalMsDone>1?"s":""}</span>
+              <span style={{fontSize:9,color:T.mt}}>{totalMsDone} jalon{totalMsDone>1?"s":""} complété{totalMsDone>1?"s":""}</span>
+              <span style={{fontSize:9,color:T.mt}}>{totalObjDone} objectif{totalObjDone>1?"s":""} coché{totalObjDone>1?"s":""}</span>
             </div>
           </div>
         )}
+
+      </div>
+    </div>
+  );
+};
+
+const ComparePage = () => {
+  const {nav,compareA,compareB,setCompareA,setCompareB,getProgress,isMsDone} = useCtx();
+
+  if(!compareA||!compareB) return (
+    <div style={{paddingTop:66,minHeight:"100vh"}}>
+      <div style={{maxWidth:540,margin:"0 auto",padding:"32px 18px",textAlign:"center"}}>
+        <p style={{fontSize:14,color:T.mt,marginBottom:16}}>Sélectionne 2 parcours depuis Explore.</p>
+        <button className="btn" onClick={()=>nav("explore")} style={{background:T.ac,color:"#080808",borderRadius:10,padding:"10px 20px",fontSize:13,fontWeight:700}}>← Retour à Explore</button>
+      </div>
+    </div>
+  );
+
+  const hzA = HORIZON[compareA.id]||{};
+  const hzB = HORIZON[compareB.id]||{};
+  const pA  = getProgress(compareA.id);
+  const pB  = getProgress(compareB.id);
+
+  const ColHd = ({c,p}) => (
+    <div style={{flex:1,minWidth:0,textAlign:"center",padding:"10px 6px 8px",background:c.c+"10",borderRadius:"12px 12px 0 0",borderBottom:`2px solid ${c.c}33`}}>
+      <div style={{fontSize:22,marginBottom:4}}>{c.e}</div>
+      <div style={{fontFamily:T.fd,fontSize:10,fontWeight:800,color:c.c,lineHeight:1.2,marginBottom:4}}>{c.t}</div>
+      {p>0&&<div style={{fontSize:8,color:T.mt}}>{p}% complété</div>}
+    </div>
+  );
+
+  const scoreColor = v => v>=70?T.gr:v>=40?T.yl:T.rd;
+  const riskColor  = v => v<=30?T.gr:v<=60?T.yl:T.rd;
+
+  const CmpRow = ({label,vA,vB,barA,barB,barMax=100,icon}) => {
+    const numA = typeof barA==="number"; const numB = typeof barB==="number";
+    return (
+      <div style={{display:"flex",gap:0,marginBottom:2,alignItems:"stretch"}}>
+        <div style={{flex:1,minWidth:0,padding:"7px 8px",background:T.sf,borderBottom:`1px solid ${T.bd}`}}>
+          {numA&&<div style={{height:3,background:T.sb,borderRadius:99,marginBottom:4}}>
+            <div style={{height:"100%",width:`${Math.min(100,barA/barMax*100)}%`,background:compareA.c,borderRadius:99}}/>
+          </div>}
+          <div style={{fontSize:10,fontWeight:600,color:T.tx,textAlign:"left"}}>{vA}</div>
+        </div>
+        <div style={{width:80,flexShrink:0,padding:"7px 4px",background:`${T.sf}88`,borderBottom:`1px solid ${T.bd}`,display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+          <span style={{fontSize:10}}>{icon}</span>
+          <span style={{fontSize:8,color:T.mt,textAlign:"center",lineHeight:1.2}}>{label}</span>
+        </div>
+        <div style={{flex:1,minWidth:0,padding:"7px 8px",background:T.sf,borderBottom:`1px solid ${T.bd}`}}>
+          {numB&&<div style={{height:3,background:T.sb,borderRadius:99,marginBottom:4}}>
+            <div style={{height:"100%",width:`${Math.min(100,barB/barMax*100)}%`,background:compareB.c,borderRadius:99}}/>
+          </div>}
+          <div style={{fontSize:10,fontWeight:600,color:T.tx,textAlign:"right"}}>{vB}</div>
+        </div>
+      </div>
+    );
+  };
+
+  const ScoreRow = ({label,a,b,icon,invert=false}) => {
+    const colA = invert?riskColor(a):scoreColor(a);
+    const colB = invert?riskColor(b):scoreColor(b);
+    return (
+      <div style={{display:"flex",gap:0,marginBottom:2,alignItems:"stretch"}}>
+        <div style={{flex:1,padding:"7px 8px",background:T.sf,borderBottom:`1px solid ${T.bd}`,textAlign:"left"}}>
+          <div style={{height:3,background:T.sb,borderRadius:99,marginBottom:4}}>
+            <div style={{height:"100%",width:`${a}%`,background:colA,borderRadius:99}}/>
+          </div>
+          <span style={{fontSize:10,fontWeight:700,color:colA}}>{a}/100</span>
+        </div>
+        <div style={{width:80,flexShrink:0,padding:"7px 4px",background:`${T.sf}88`,borderBottom:`1px solid ${T.bd}`,display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+          <span style={{fontSize:10}}>{icon}</span>
+          <span style={{fontSize:8,color:T.mt,textAlign:"center",lineHeight:1.2}}>{label}</span>
+        </div>
+        <div style={{flex:1,padding:"7px 8px",background:T.sf,borderBottom:`1px solid ${T.bd}`,textAlign:"right"}}>
+          <div style={{height:3,background:T.sb,borderRadius:99,marginBottom:4}}>
+            <div style={{height:"100%",width:`${b}%`,background:colB,borderRadius:99,marginLeft:"auto"}}/>
+          </div>
+          <span style={{fontSize:10,fontWeight:700,color:colB}}>{b}/100</span>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div style={{paddingTop:66,minHeight:"100vh"}}>
+      <div style={{maxWidth:540,margin:"0 auto",padding:"16px 0 80px"}}>
+
+        {/* Header */}
+        <div style={{padding:"0 18px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <h1 style={{fontFamily:T.fd,fontSize:20,fontWeight:800,letterSpacing:"-1px"}}>⚖ Comparaison</h1>
+          <button className="btn" onClick={()=>{setCompareA(null);setCompareB(null);nav("explore");}} style={{background:"none",fontSize:10,color:T.mt,padding:4}}>Effacer ✕</button>
+        </div>
+
+        {/* Column headers */}
+        <div style={{display:"flex",gap:0,margin:"0 0 0 0"}}>
+          <ColHd c={compareA} p={pA}/>
+          <div style={{width:80,flexShrink:0}}/>
+          <ColHd c={compareB} p={pB}/>
+        </div>
+
+        <div style={{borderRadius:"0 0 12px 12px",overflow:"hidden",margin:"0"}}>
+          {/* Infos générales */}
+          <CmpRow icon="⏱" label="Durée"       vA={compareA.dur} vB={compareB.dur}/>
+          <CmpRow icon="💰" label="Coût"        vA={compareA.cost} vB={compareB.cost}/>
+          <CmpRow icon="📊" label="Niveau"      vA={compareA.lv} vB={compareB.lv}/>
+          <CmpRow icon="💼" label="Sal. junior" vA={compareA.sal.j} vB={compareB.sal.j}/>
+          <CmpRow icon="📈" label="Sal. senior" vA={compareA.sal.s} vB={compareB.sal.s}/>
+          <CmpRow icon="🎓" label="Jalons"      vA={`${compareA.ms.length} étapes`} vB={`${compareB.ms.length} étapes`}/>
+
+          {/* Scores horizon */}
+          {(hzA.ss!==undefined||compareA.ss)&&<ScoreRow icon="🛡" label="Sécurité" a={hzA.ss??compareA.ss??50} b={hzB.ss??compareB.ss??50}/>}
+          {hzA.ai!==undefined&&<ScoreRow icon="🤖" label="Risque IA" a={hzA.ai??50} b={hzB.ai??50} invert/>}
+          {hzA.gr!==undefined&&<ScoreRow icon="🚀" label="Croissance" a={hzA.gr??50} b={hzB.gr??50}/>}
+
+          {/* Timeline Y5 / Y10 */}
+          {(hzA.timeline||hzB.timeline)&&<>
+            <CmpRow icon="📅" label="5 ans" vA={hzA.timeline?.y5||"—"} vB={hzB.timeline?.y5||"—"}/>
+            <CmpRow icon="📅" label="10 ans" vA={hzA.timeline?.y10||"—"} vB={hzB.timeline?.y10||"—"}/>
+          </>}
+        </div>
+
+        {/* Skills */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:0,marginTop:12,padding:"0 0 0 0"}}>
+          <div style={{padding:"10px 12px",background:T.sf,borderRadius:"10px 0 0 10px",border:`1px solid ${T.bd}`}}>
+            <div style={{fontSize:8,color:T.mt,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:6}}>Skills</div>
+            {(compareA.sk||[]).slice(0,5).map((s,i)=><div key={i} style={{fontSize:9,color:compareA.c,marginBottom:3,padding:"2px 6px",background:compareA.c+"12",borderRadius:99,display:"inline-block",marginRight:3}}>{s}</div>)}
+          </div>
+          <div style={{width:80,background:T.sfh,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:16}}>⚡</span></div>
+          <div style={{padding:"10px 12px",background:T.sf,borderRadius:"0 10px 10px 0",border:`1px solid ${T.bd}`,textAlign:"right"}}>
+            <div style={{fontSize:8,color:T.mt,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:6}}>Skills</div>
+            {(compareB.sk||[]).slice(0,5).map((s,i)=><div key={i} style={{fontSize:9,color:compareB.c,marginBottom:3,padding:"2px 6px",background:compareB.c+"12",borderRadius:99,display:"inline-block",marginLeft:3}}>{s}</div>)}
+          </div>
+        </div>
+
+        {/* Verdict horizon */}
+        {(hzA.verdict||hzB.verdict)&&(
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:12,padding:"0 0 0 0"}}>
+            {[{hz:hzA,c:compareA},{hz:hzB,c:compareB}].map(({hz,c},i)=>hz.verdict&&(
+              <div key={i} style={{background:T.sf,border:`1px solid ${c.c}20`,borderRadius:10,padding:"10px",borderTop:`2px solid ${c.c}44`}}>
+                <div style={{fontSize:8,color:T.mt,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:5}}>Verdict</div>
+                <p style={{fontSize:9,color:T.tx,lineHeight:1.5}}>{hz.verdict}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* CTA */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:14,padding:"0 0 0 0"}}>
+          <button className="btn" onClick={()=>nav("career",compareA.id)} style={{background:compareA.c,color:"#080808",borderRadius:10,padding:"11px",fontSize:11,fontWeight:700,textAlign:"center"}}>{compareA.e} Voir {compareA.t.split(" ").slice(0,2).join(" ")}</button>
+          <button className="btn" onClick={()=>nav("career",compareB.id)} style={{background:compareB.c,color:"#080808",borderRadius:10,padding:"11px",fontSize:11,fontWeight:700,textAlign:"center"}}>{compareB.e} Voir {compareB.t.split(" ").slice(0,2).join(" ")}</button>
+        </div>
 
       </div>
     </div>

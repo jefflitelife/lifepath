@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useMemo, createContext, useContext } from "react";
+import { useState, useEffect, useRef, useMemo, useContext } from "react";
 import TreeVisual from "./TreeVisual";
+import { Ctx } from "./ctx";
 
 // ━━━ TOKENS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const T={bg:"#070709",sf:"#0f0f12",sfh:"#16161b",bd:"rgba(255,255,255,0.07)",tx:"#EEEAE0",mt:"#5a5a6e",sb:"#2e2e38",ac:"#C8FF00",acd:"rgba(200,255,0,0.10)",acg:"rgba(200,255,0,0.22)",bl:"#4D9FFF",gr:"#22C55E",grd:"rgba(34,197,94,0.10)",or:"#FF7A3D",ord:"rgba(255,122,61,0.10)",pu:"#A855F7",pud:"rgba(168,85,247,0.10)",rd:"#FF4D4D",yl:"#F59E0B",pk:"#EC4899",sl:"#64748B",nv:"#1E40AF",fd:"'Syne',sans-serif",fb:"'DM Sans',sans-serif"};
@@ -386,7 +387,6 @@ const BADGES = [
   {id:"cameleon", icon:"🌐", name:"Caméléon",      desc:"2 parcours commencés",               check:({getProgress}) => CAREER_LIST.filter(c=>getProgress(c.id)>0).length>=2},
 ];
 
-export const Ctx = createContext(null);
 const useCtx = () => useContext(Ctx);
 
 // ━━━ CELEBRATION ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

@@ -1,5 +1,5 @@
 import { useState, useMemo, useContext } from "react";
-import { Ctx } from "./App";
+import { Ctx } from "./ctx";
 
 export default function TreeVisual() {
   const {

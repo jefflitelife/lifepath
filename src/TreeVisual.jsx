@@ -61,25 +61,18 @@ export default function TreeVisual() {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#030508", overflow: "hidden" }}>
       <style>{`
-        @keyframes twinkle { 0%,100%{opacity:var(--op);} 50%{opacity:calc(var(--op)*0.3);} }
-        @keyframes pulse-glow { 0%,100%{filter:drop-shadow(0 0 4px #C8FF00);} 50%{filter:drop-shadow(0 0 12px #C8FF00) drop-shadow(0 0 24px #C8FF0060);} }
-        @keyframes branch-glow { 0%,100%{filter:drop-shadow(0 0 3px var(--col));} 50%{filter:drop-shadow(0 0 8px var(--col)) drop-shadow(0 0 16px var(--col));} }
-        @keyframes orbit-particle { 0%{opacity:0;} 10%{opacity:1;} 90%{opacity:1;} 100%{opacity:0;} }
         @keyframes slide-up { from{transform:translateY(100%);} to{transform:translateY(0);} }
-        .tv-star { animation: twinkle var(--dur) var(--delay) ease-in-out infinite; }
-        .tv-central { animation: pulse-glow 3s ease-in-out infinite; }
-        .tv-branch { animation: branch-glow var(--bdur) ease-in-out infinite; }
       `}</style>
 
-      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ position: "absolute", inset: 0 }}>
+      <svg width="100%" height="100%" viewBox={`0 0 ${W} ${H}`} style={{ position: "absolute", top: 0, left: 0 }}>
         <defs>
           <radialGradient id="tvCentral" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#1a2a0a"/>
             <stop offset="100%" stopColor="#0a0f05"/>
           </radialGradient>
           <radialGradient id="tvVignette" cx="50%" cy="50%" r="70%">
-            <stop offset="0%" stopColor="transparent"/>
-            <stop offset="100%" stopColor="#030508"/>
+            <stop offset="0%" stopColor="#030508" stopOpacity="0"/>
+            <stop offset="100%" stopColor="#030508" stopOpacity="1"/>
           </radialGradient>
           <radialGradient id="tvNeb1" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#C8FF00" stopOpacity="0.07"/>
@@ -103,15 +96,10 @@ export default function TreeVisual() {
 
         {/* Stars */}
         {stars.map(s => (
-          <circle
-            key={s.id}
-            className="tv-star"
-            cx={`${s.x}%`}
-            cy={`${s.y}%`}
-            r={s.r}
-            fill="white"
-            style={{ "--op": s.op, "--dur": `${s.dur}s`, "--delay": `${s.delay}s`, opacity: s.op }}
-          />
+          <circle key={s.id} cx={`${s.x}%`} cy={`${s.y}%`} r={s.r} fill="white" opacity={s.op}>
+            <animate attributeName="opacity" values={`${s.op};${+(s.op * 0.3).toFixed(2)};${s.op}`}
+              dur={`${s.dur}s`} begin={`${Math.abs(s.delay)}s`} repeatCount="indefinite"/>
+          </circle>
         ))}
 
         {/* Nebulae */}
@@ -155,8 +143,6 @@ export default function TreeVisual() {
               <circle cx={pos.x} cy={pos.y} r={38}
                 fill={`url(#tvBg${i})`}
                 stroke={b.color} strokeWidth={1.5}
-                className="tv-branch"
-                style={{ "--col": b.color, "--bdur": `${2 + i * 0.3}s` }}
               />
               <circle cx={pos.x} cy={pos.y} r={22} fill={b.color + "15"}/>
               <text x={pos.x} y={pos.y} textAnchor="middle" dominantBaseline="central" fontSize={16}>{b.icon || "🌿"}</text>
@@ -210,7 +196,7 @@ export default function TreeVisual() {
         </circle>
 
         {/* Central node main */}
-        <circle cx={cx} cy={cy} r={52} fill="url(#tvCentral)" stroke="#C8FF00" strokeWidth={1.5} className="tv-central"/>
+        <circle cx={cx} cy={cy} r={52} fill="url(#tvCentral)" stroke="#C8FF00" strokeWidth={1.5}/>
         <circle cx={cx} cy={cy} r={26} fill="#C8FF0015"/>
         <text x={cx} y={cy - 2} textAnchor="middle" dominantBaseline="central"
           fontSize={11} fontFamily="Syne,sans-serif" fontWeight="700" fill="#C8FF00">

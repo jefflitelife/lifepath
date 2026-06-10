@@ -462,6 +462,14 @@ export default function LifePath() {
     saveLS({ completedMs, favorites, treeBranches, treeObjCompleted, streak, todayDate, todayChecks, userName, onboardingDone, activeDays, pillars, lastVisit: new Date().toISOString().slice(0,10) });
   }, [completedMs, favorites, treeBranches, treeObjCompleted, streak, todayDate, todayChecks, userName, onboardingDone, activeDays, pillars]);
 
+  // Resync treeObjCompleted after leaving immersive mode (TreeVisual writes localStorage directly)
+  useEffect(() => {
+    if (page !== "treevisual") {
+      const saved = loadLS();
+      if (saved.treeObjCompleted) setTreeObjCompleted(saved.treeObjCompleted);
+    }
+  }, [page]);
+
   useEffect(() => {
     // ── Streak update on visit
     const saved = loadLS();
@@ -586,20 +594,22 @@ export default function LifePath() {
               <button className="btn" onClick={()=>nav("settings")} style={{padding:"4px 6px",borderRadius:99,fontSize:13,background:page==="settings"?T.ac:"transparent",color:page==="settings"?"#080808":T.mt}}>⚙️</button>
             </nav>
           </header>}
-          <div key={page+selCareer+selMilestone+(selBranch?.id||"")} className="fu">
-            {page==="home"&&<HomePage/>}
-            {page==="explore"&&<ExplorePage/>}
-            {page==="career"&&<CareerPage/>}
-            {page==="milestone"&&<MilestonePage/>}
-            {page==="tree"&&<TreePage/>}
-            {page==="treebranch"&&<TreeBranchPage/>}
-            {page==="treecatalog"&&<TreeCatalogPage/>}
-            {page==="daily"&&<DailyPage/>}
-            {page==="dashboard"&&<DashboardPage/>}
-            {page==="compare"&&<ComparePage/>}
-            {page==="treevisual"&&<TreeVisual/>}
-            {page==="settings"&&<SettingsPage/>}
-          </div>
+          {page==="treevisual"
+            ? <TreeVisual onBack={()=>nav("tree")}/>
+            : <div key={page+selCareer+selMilestone+(selBranch?.id||"")} className="fu">
+                {page==="home"&&<HomePage/>}
+                {page==="explore"&&<ExplorePage/>}
+                {page==="career"&&<CareerPage/>}
+                {page==="milestone"&&<MilestonePage/>}
+                {page==="tree"&&<TreePage/>}
+                {page==="treebranch"&&<TreeBranchPage/>}
+                {page==="treecatalog"&&<TreeCatalogPage/>}
+                {page==="daily"&&<DailyPage/>}
+                {page==="dashboard"&&<DashboardPage/>}
+                {page==="compare"&&<ComparePage/>}
+                {page==="settings"&&<SettingsPage/>}
+              </div>
+          }
         </>)}
       </div>
     </Ctx.Provider>

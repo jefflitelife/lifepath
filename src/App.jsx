@@ -442,6 +442,7 @@ export default function LifePath() {
   const [onboardingDone, setOnboardingDone] = useState(() => !!loadLS().onboardingDone);
   const [activeDays,     setActiveDays]     = useState(() => loadLS().activeDays || 1);
   const [pillars,        setPillars]        = useState(() => loadLS().pillars || null);
+  const [activityLog,   setActivityLog]   = useState(() => loadLS().activityLog || {});
   // Compare
   const [compareA, setCompareA] = useState(null);
   const [compareB, setCompareB] = useState(null);
@@ -456,11 +457,12 @@ export default function LifePath() {
     const today = new Date().toISOString().slice(0,10);
     if(todayDate!==today){ setTodayDate(today); setTodayChecks(1); }
     else setTodayChecks(c=>c+1);
+    setActivityLog(prev => ({...prev, [today]: true}));
   };
 
   useEffect(() => {
-    saveLS({ completedMs, favorites, treeBranches, treeObjCompleted, streak, todayDate, todayChecks, userName, onboardingDone, activeDays, pillars, lastVisit: new Date().toISOString().slice(0,10) });
-  }, [completedMs, favorites, treeBranches, treeObjCompleted, streak, todayDate, todayChecks, userName, onboardingDone, activeDays, pillars]);
+    saveLS({ completedMs, favorites, treeBranches, treeObjCompleted, streak, todayDate, todayChecks, userName, onboardingDone, activeDays, pillars, activityLog, lastVisit: new Date().toISOString().slice(0,10) });
+  }, [completedMs, favorites, treeBranches, treeObjCompleted, streak, todayDate, todayChecks, userName, onboardingDone, activeDays, pillars, activityLog]);
 
   // Resync treeObjCompleted after leaving immersive mode (TreeVisual writes localStorage directly)
   useEffect(() => {
@@ -480,8 +482,11 @@ export default function LifePath() {
       setActiveDays((saved.activeDays||1)+1);
     }
     if(saved.todayDate && saved.todayDate!==today){ setTodayDate(today); setTodayChecks(0); }
-    // ── Browser notifications
+    setActivityLog(prev => ({...prev, [today]: true}));
+    // ── Browser notifications — respect lp_notif toggle
     if(!("Notification" in window)) return;
+    let notifOn; try { notifOn = JSON.parse(localStorage.getItem("lp_notif")||"false"); } catch { notifOn = false; }
+    if(!notifOn) return;
     (async()=>{
       let perm = Notification.permission;
       if(perm==="default") perm = await Notification.requestPermission();
@@ -491,17 +496,15 @@ export default function LifePath() {
       const now    = new Date();
       const next9  = new Date(now); next9.setHours(9,0,0,0);
       if(now>=next9 && lastN!==today2){
-        // Past 9am, not yet notified today → show now
         new Notification("LifePath 🌱",{body:`🔥 ${loadLS().streak||1} jour(s) de streak ! Vos tâches du jour vous attendent.`,icon:"/favicon.ico"});
         localStorage.setItem("lifepath_notif_date",today2);
         next9.setDate(next9.getDate()+1);
       } else if(lastN===today2){
-        // Already notified today → schedule tomorrow
         next9.setDate(next9.getDate()+1);
       }
-      // Schedule next fire (today if <9am, tomorrow otherwise)
       const delay = next9-new Date();
       if(delay>0) setTimeout(()=>{
+        if(!JSON.parse(localStorage.getItem("lp_notif")||"false")) return;
         const s=loadLS(),t=new Date().toISOString().slice(0,10);
         new Notification("LifePath 🌱",{body:`🔥 ${s.streak||1} jour(s) de streak ! Bonne journée productive.`,icon:"/favicon.ico"});
         localStorage.setItem("lifepath_notif_date",t);
@@ -544,7 +547,7 @@ export default function LifePath() {
     notify(`🌱 "${branch.title}" ajoutée !`);
   };
 
-  const ctx = {page,nav,selCareer,selMilestone,completedMs,toggleMs,isMsDone,getProgress,search,setSearch,cat,setCat,favorites,toggleFav,treeBranches,setTreeBranches,selBranch,setSelBranch,treeObjCompleted,toggleTreeObj,isTreeObjDone,treeBranchProg,treeLevelProg,isTreeLevelUnlocked,addTreeBranch,notification,notify,streak,todayChecks,bumpToday,userName,setUserName,onboardingDone,setOnboardingDone,activeDays,pillars,setPillars,compareA,setCompareA,compareB,setCompareB};
+  const ctx = {page,nav,selCareer,selMilestone,completedMs,toggleMs,isMsDone,getProgress,search,setSearch,cat,setCat,favorites,toggleFav,treeBranches,setTreeBranches,selBranch,setSelBranch,treeObjCompleted,toggleTreeObj,isTreeObjDone,treeBranchProg,treeLevelProg,isTreeLevelUnlocked,addTreeBranch,notification,notify,streak,todayChecks,bumpToday,activityLog,userName,setUserName,onboardingDone,setOnboardingDone,activeDays,pillars,setPillars,compareA,setCompareA,compareB,setCompareB};
 
   return (
     <Ctx.Provider value={ctx}>
@@ -1076,6 +1079,9 @@ const MilestonePage = () => {
 // ━━━ TREE PAGE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const TreePage = () => {
   const {nav,treeBranches,setSelBranch,treeBranchProg,isTreeObjDone,notify} = useCtx();
+  useEffect(() => {
+    try { if (JSON.parse(localStorage.getItem("lp_immersive")||"false")) nav("treevisual"); } catch {}
+  }, []);
   const totalObj = treeBranches.reduce((s,b)=>{let t=0;(b.levels||[]).forEach(l=>t+=(l.objs||[]).length);return s+t;},0);
   const totalObjDone = treeBranches.reduce((s,b)=>{
     let d=0; (b.levels||[]).forEach(l=>(l.objs||[]).forEach(o=>{if(isTreeObjDone(b.id,o))d++;})); return s+d;
@@ -1303,21 +1309,29 @@ const TreeBranchPage = () => {
 
 // ━━━ DAILY PAGE (simplified) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const DailyPage = () => {
-  const {nav,selCareer,treeBranches,isMsDone,isTreeLevelUnlocked,pillars} = useCtx();
+  const {nav,selCareer,treeBranches,isMsDone,isTreeLevelUnlocked,pillars,bumpToday} = useCtx();
+  const [checked, setChecked] = useState({});
   const career = selCareer ? C[selCareer] : null;
   const currentMs = career ? (career.ms.find((_,i) => !isMsDone(career.id,i) && career.ms.slice(0,i).every((_,j) => isMsDone(career.id,j))) || career.ms[0]) : null;
+  const tick = (key) => setChecked(prev => {
+    if(!prev[key]) bumpToday();
+    return {...prev, [key]: !prev[key]};
+  });
+  const taskStyle = (done) => ({background:T.sf,border:`1px solid ${done?T.gr+"44":T.bd}`,borderRadius:8,padding:"8px 10px",marginBottom:4,fontSize:11,color:done?T.mt:T.tx,cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"border-color .15s"});
   return (
     <div style={{paddingTop:66,minHeight:"100vh"}}>
       <div style={{maxWidth:540,margin:"0 auto",padding:"16px 18px 80px"}}>
         <h1 style={{fontFamily:T.fd,fontSize:22,fontWeight:800,letterSpacing:"-1px",marginBottom:4}}>Ma Journée</h1>
         <p style={{color:T.mt,fontSize:12,marginBottom:16}}>Ce que tu peux faire aujourd'hui</p>
 
-        {/* Career daily habits */}
         {currentMs&&currentMs.dh&&<Sec t={`💼 ${career.t}`}>
-          {currentMs.dh.map((h,i)=><div key={i} style={{background:T.sf,border:`1px solid ${T.bd}`,borderRadius:8,padding:"8px 10px",marginBottom:4,fontSize:11,color:T.tx}}>☐ {h}</div>)}
+          {currentMs.dh.map((h,i)=>{const id=`ch-${i}`,done=!!checked[id];return(
+            <div key={i} onClick={()=>tick(id)} style={taskStyle(done)}>
+              <span style={{fontSize:13,color:done?T.gr:T.mt,flexShrink:0}}>{done?"✓":"☐"}</span>
+              <span style={{textDecoration:done?"line-through":"none"}}>{h}</span>
+            </div>);})}
         </Sec>}
 
-        {/* Tree branches daily view */}
         {treeBranches.map(b => {
           let curIdx = 0;
           (b.levels||[]).forEach((_,i) => { if(isTreeLevelUnlocked(b,i)) curIdx = i; });
@@ -1326,21 +1340,23 @@ const DailyPage = () => {
           const firstUndone = (currentLevel.objs||[]).slice(0,3);
           return (
             <Sec key={b.id} t={`${b.icon} ${b.title}`}>
-              {firstUndone.map((o,i)=><div key={i} style={{background:T.sf,border:`1px solid ${T.bd}`,borderRadius:8,padding:"8px 10px",marginBottom:4,fontSize:11,color:T.tx}}>☐ {o}</div>)}
+              {firstUndone.map((o,i)=>{const id=`bo-${b.id}-${i}`,done=!!checked[id];return(
+                <div key={i} onClick={()=>tick(id)} style={taskStyle(done)}>
+                  <span style={{fontSize:13,color:done?T.gr:T.mt,flexShrink:0}}>{done?"✓":"☐"}</span>
+                  <span style={{textDecoration:done?"line-through":"none"}}>{o}</span>
+                </div>);})}
               <button className="btn" onClick={()=>{nav("treebranch");}} style={{fontSize:10,color:b.color||T.pu,background:"none",padding:"4px 0"}}>Voir tout →</button>
             </Sec>
           );
         })}
 
-        {/* Piliers de Vie */}
         {pillars && Object.values(pillars).some(p=>p.enabled) && (
           <Sec t="🎯 Piliers de Vie">
-            {Object.values(pillars).filter(p=>p.enabled).map((p,i)=>(
-              <div key={i} style={{background:T.sf,border:`1px solid ${T.bd}`,borderRadius:8,padding:"8px 10px",marginBottom:4,fontSize:11,color:T.tx,display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:14}}>{p.emoji}</span>
-                <span style={{flex:1}}>{p.label}{p.goal?` — ${p.goal}`:""}</span>
-              </div>
-            ))}
+            {Object.values(pillars).filter(p=>p.enabled).map((p,i)=>{const id=`pi-${i}`,done=!!checked[id];return(
+              <div key={i} onClick={()=>tick(id)} style={taskStyle(done)}>
+                <span style={{fontSize:13,color:done?T.gr:T.mt,flexShrink:0}}>{done?"✓":"☐"}</span>
+                <span style={{textDecoration:done?"line-through":"none"}}>{p.emoji} {p.label}{p.goal?` — ${p.goal}`:""}</span>
+              </div>);})}
             <button className="btn" onClick={()=>nav("settings")} style={{fontSize:10,color:T.mt,background:"none",padding:"4px 0"}}>Modifier les piliers →</button>
           </Sec>
         )}
@@ -1536,7 +1552,7 @@ const QUOTES = [
 
 // ━━━ DASHBOARD ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const DashboardPage = () => {
-  const {nav,completedMs,favorites,treeBranches,treeObjCompleted,streak,todayChecks,getProgress,treeBranchProg,isMsDone,userName,activeDays,selCareer} = useCtx();
+  const {nav,completedMs,favorites,treeBranches,treeObjCompleted,streak,todayChecks,getProgress,treeBranchProg,isMsDone,userName,activeDays,selCareer,activityLog} = useCtx();
   const ctxB = {completedMs,favorites,treeBranches,streak,todayChecks,getProgress,userName,selCareer};
   const prevBadgesRef = useRef(null);
   useEffect(() => {
@@ -1568,13 +1584,13 @@ const DashboardPage = () => {
   const dayOfMonth = new Date().getDate();
   const dailyQuote = QUOTES[dayOfMonth % QUOTES.length];
 
-  // Weekly chart: last 7 days — filled based on streak
+  // Weekly chart: last 7 days — real activity from activityLog
   const weekDays = Array.from({length:7},(_,i)=>{
     const d = new Date(); d.setDate(d.getDate()-6+i);
     const label = d.toLocaleDateString("fr-FR",{weekday:"short"}).slice(0,3);
-    const daysAgo = 6-i;
-    const active = daysAgo < streak;
-    return {label, active};
+    const dateStr = d.toISOString().slice(0,10);
+    const active = !!activityLog[dateStr];
+    return {label, active, dateStr};
   });
 
   // Prochaine étape — first active career's next incomplete milestone

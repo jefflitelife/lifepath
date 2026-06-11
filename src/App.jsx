@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useContext } from "react";
 import TreeVisual from "./TreeVisual";
 import { Ctx } from "./ctx";
+import { supabase } from "./supabase";
 
 // ━━━ TOKENS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const T={bg:"#070709",sf:"#0f0f12",sfh:"#16161b",bd:"rgba(255,255,255,0.07)",tx:"#EEEAE0",mt:"#5a5a6e",sb:"#2e2e38",ac:"#C8FF00",acd:"rgba(200,255,0,0.10)",acg:"rgba(200,255,0,0.22)",bl:"#4D9FFF",gr:"#22C55E",grd:"rgba(34,197,94,0.10)",or:"#FF7A3D",ord:"rgba(255,122,61,0.10)",pu:"#A855F7",pud:"rgba(168,85,247,0.10)",rd:"#FF4D4D",yl:"#F59E0B",pk:"#EC4899",sl:"#64748B",nv:"#1E40AF",fd:"'Syne',sans-serif",fb:"'DM Sans',sans-serif"};
@@ -446,6 +447,9 @@ export default function LifePath() {
   // Compare
   const [compareA, setCompareA] = useState(null);
   const [compareB, setCompareB] = useState(null);
+  // Auth
+  const [user,        setUser]        = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   const nav = (p, c, m) => { if(c!==undefined) setSelCareer(c); if(m!==undefined) setSelMilestone(m); setPage(p); };
   const notify = (msg) => { setNotification(msg); setTimeout(()=>setNotification(null), 3500); };
@@ -460,8 +464,58 @@ export default function LifePath() {
     setActivityLog(prev => ({...prev, [today]: true}));
   };
 
+  const userRef      = useRef(null);
+  useEffect(() => { userRef.current = user; }, [user]);
+  const syncTimerRef = useRef(null);
+
+  const loadProgressFromSupabase = async (u) => {
+    try {
+      supabase.from('users').upsert(
+        { id: u.id, email: u.email || '', username: u.user_metadata?.full_name || null },
+        { onConflict: 'id' }
+      ).catch(() => {});
+      const { data } = await supabase.from('progress').select('*').eq('user_id', u.id).maybeSingle();
+      if (!data) {
+        const ls = loadLS();
+        supabase.rpc('upsert_progress', {
+          p_completed_ms: ls.completedMs || {}, p_tree_branches: ls.treeBranches || [],
+          p_tree_obj_completed: ls.treeObjCompleted || {}, p_streak: ls.streak || 1,
+          p_activity_log: ls.activityLog || {}, p_pillars: ls.pillars || null,
+          p_today_date: ls.todayDate || null, p_today_checks: ls.todayChecks || 0,
+          p_active_days: ls.activeDays || 1, p_favorites: ls.favorites || [],
+          p_last_visit: ls.lastVisit || null,
+        }).catch(() => {});
+        return;
+      }
+      if (data.completed_ms)                     setCompletedMs(data.completed_ms);
+      if (Array.isArray(data.favorites))         setFavorites(data.favorites);
+      if (Array.isArray(data.tree_branches))     setTreeBranches(data.tree_branches);
+      if (data.tree_obj_completed)               setTreeObjCompleted(data.tree_obj_completed);
+      if (typeof data.streak === 'number')       setStreak(data.streak);
+      if (data.activity_log)                     setActivityLog(data.activity_log);
+      if (data.pillars !== undefined)            setPillars(data.pillars);
+      if (data.today_date)                       setTodayDate(data.today_date);
+      if (typeof data.today_checks === 'number') setTodayChecks(data.today_checks);
+      if (typeof data.active_days  === 'number') setActiveDays(data.active_days);
+    } catch { /* offline — keep localStorage */ }
+  };
+
+  const signOut = async () => { await supabase.auth.signOut(); };
+
   useEffect(() => {
     saveLS({ completedMs, favorites, treeBranches, treeObjCompleted, streak, todayDate, todayChecks, userName, onboardingDone, activeDays, pillars, activityLog, lastVisit: new Date().toISOString().slice(0,10) });
+    if (userRef.current) {
+      if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+      syncTimerRef.current = setTimeout(() => {
+        supabase.rpc('upsert_progress', {
+          p_completed_ms: completedMs, p_tree_branches: treeBranches,
+          p_tree_obj_completed: treeObjCompleted, p_streak: streak,
+          p_activity_log: activityLog, p_pillars: pillars, p_today_date: todayDate,
+          p_today_checks: todayChecks, p_active_days: activeDays,
+          p_favorites: favorites, p_last_visit: new Date().toISOString().slice(0,10),
+        }).catch(() => {});
+      }, 1200);
+    }
   }, [completedMs, favorites, treeBranches, treeObjCompleted, streak, todayDate, todayChecks, userName, onboardingDone, activeDays, pillars, activityLog]);
 
   // Resync treeObjCompleted after leaving immersive mode (TreeVisual writes localStorage directly)
@@ -512,6 +566,18 @@ export default function LifePath() {
     })();
   }, []);
 
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const u = session?.user ?? null;
+      setUser(u);
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && u) {
+        await loadProgressFromSupabase(u);
+      }
+      setAuthLoading(false);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   // Tree helpers
   const toggleTreeObj = (branchId, objText) => {
     const key = `${branchId}::${objText}`;
@@ -547,7 +613,7 @@ export default function LifePath() {
     notify(`🌱 "${branch.title}" ajoutée !`);
   };
 
-  const ctx = {page,nav,selCareer,selMilestone,completedMs,toggleMs,isMsDone,getProgress,search,setSearch,cat,setCat,favorites,toggleFav,treeBranches,setTreeBranches,selBranch,setSelBranch,treeObjCompleted,toggleTreeObj,isTreeObjDone,treeBranchProg,treeLevelProg,isTreeLevelUnlocked,addTreeBranch,notification,notify,streak,todayChecks,bumpToday,activityLog,userName,setUserName,onboardingDone,setOnboardingDone,activeDays,pillars,setPillars,compareA,setCompareA,compareB,setCompareB};
+  const ctx = {page,nav,selCareer,selMilestone,completedMs,toggleMs,isMsDone,getProgress,search,setSearch,cat,setCat,favorites,toggleFav,treeBranches,setTreeBranches,selBranch,setSelBranch,treeObjCompleted,toggleTreeObj,isTreeObjDone,treeBranchProg,treeLevelProg,isTreeLevelUnlocked,addTreeBranch,notification,notify,streak,todayChecks,bumpToday,activityLog,userName,setUserName,onboardingDone,setOnboardingDone,activeDays,pillars,setPillars,compareA,setCompareA,compareB,setCompareB,user,signOut};
 
   return (
     <Ctx.Provider value={ctx}>
@@ -567,13 +633,13 @@ export default function LifePath() {
         .tag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:99px;font-size:10px;font-weight:600;white-space:nowrap}
         input:focus,textarea:focus,select:focus{outline:none;border-color:${T.ac}!important}
       `}</style>
-      {loading&&<div style={{position:"fixed",inset:0,background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:99999}}>
+      {(loading||authLoading)&&<div style={{position:"fixed",inset:0,background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:99999}}>
         <div style={{width:40,height:40,borderRadius:"50%",border:`3px solid ${T.sb}`,borderTopColor:T.ac,animation:"spin .8s linear infinite"}}/>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>}
       <div style={{minHeight:"100vh",background:T.bg}}>
         {notification&&<div style={{position:"fixed",top:12,left:"50%",transform:"translateX(-50%)",zIndex:9999,background:T.sf,border:`1px solid ${T.ac}33`,borderRadius:12,padding:"10px 18px",fontSize:12,color:T.tx,fontWeight:600,boxShadow:"0 8px 32px rgba(0,0,0,.5)",animation:"slideIn .3s ease",maxWidth:340,textAlign:"center"}}>{notification}</div>}
-        {!onboardingDone ? <OnboardingFlow/> : (<>
+        {!user ? <AuthPage/> : !onboardingDone ? <OnboardingFlow/> : (<>
           {page!=="home"&&<header style={{position:"fixed",inset:"0 0 auto",zIndex:100,height:50,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 12px",background:"rgba(7,7,9,.9)",backdropFilter:"blur(20px)",borderBottom:`1px solid ${T.bd}`}}>
             <button className="btn" onClick={()=>nav("home")} style={{background:"none",display:"flex",alignItems:"center",gap:5,padding:0,color:T.tx}}>
               <div style={{width:20,height:20,borderRadius:5,background:T.ac,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:900,color:"#080808"}}>L</div>
@@ -618,6 +684,94 @@ export default function LifePath() {
     </Ctx.Provider>
   );
 }
+
+// ━━━ AUTH PAGE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const AuthPage = () => {
+  const [email, setEmail] = useState("");
+  const [emailSent, setEmailSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [showEmail, setShowEmail] = useState(false);
+
+  const handleGoogle = async () => {
+    setLoading(true); setError(null);
+    const { error: e } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    if (e) { setError(e.message); setLoading(false); }
+  };
+
+  const handleMagicLink = async () => {
+    if (!email.trim()) return;
+    setLoading(true); setError(null);
+    const { error: e } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: { emailRedirectTo: window.location.origin },
+    });
+    setLoading(false);
+    if (e) setError(e.message);
+    else setEmailSent(true);
+  };
+
+  return (
+    <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 20px"}}>
+      <div style={{width:"100%",maxWidth:380}}>
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <div style={{width:52,height:52,borderRadius:14,background:T.ac,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:900,color:"#080808",margin:"0 auto 12px"}}>L</div>
+          <h1 style={{fontFamily:T.fd,fontSize:24,fontWeight:800,letterSpacing:"-0.8px",color:T.tx,marginBottom:6}}>LifePath</h1>
+          <p style={{fontSize:13,color:T.mt}}>Ton compagnon de développement personnel</p>
+        </div>
+
+        {error && (
+          <div style={{background:"rgba(255,77,77,.1)",border:"1px solid rgba(255,77,77,.3)",borderRadius:10,padding:"10px 14px",marginBottom:16,fontSize:12,color:"#FF4D4D",textAlign:"center"}}>
+            {error}
+          </div>
+        )}
+
+        {emailSent ? (
+          <div style={{background:T.sf,border:`1px solid ${T.ac}33`,borderRadius:14,padding:"24px 20px",textAlign:"center"}}>
+            <div style={{fontSize:32,marginBottom:12}}>📬</div>
+            <p style={{fontSize:14,fontWeight:700,color:T.tx,marginBottom:6}}>Email envoyé !</p>
+            <p style={{fontSize:12,color:T.mt}}>Vérifie ta boîte mail et clique sur le lien de connexion.</p>
+          </div>
+        ) : (
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <button className="btn" onClick={handleGoogle} disabled={loading}
+              style={{width:"100%",padding:"14px 20px",borderRadius:12,background:"#fff",color:"#1a1a1a",fontSize:14,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:10,opacity:loading?0.6:1}}>
+              <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+              Continuer avec Google
+            </button>
+
+            {!showEmail ? (
+              <button className="btn" onClick={()=>setShowEmail(true)} disabled={loading}
+                style={{width:"100%",padding:"14px 20px",borderRadius:12,background:T.sf,border:`1px solid ${T.bd}`,color:T.tx,fontSize:14,fontWeight:700}}>
+                Connexion par email
+              </button>
+            ) : (
+              <div style={{background:T.sf,border:`1px solid ${T.bd}`,borderRadius:12,padding:"16px"}}>
+                <input
+                  type="email" value={email} onChange={e=>setEmail(e.target.value)}
+                  onKeyDown={e=>e.key==="Enter"&&handleMagicLink()}
+                  placeholder="ton@email.com"
+                  style={{width:"100%",background:T.sfh,border:`1px solid ${T.bd}`,borderRadius:8,padding:"10px 12px",fontSize:13,color:T.tx,fontFamily:T.fb,marginBottom:10,boxSizing:"border-box"}}
+                />
+                <button className="btn" onClick={handleMagicLink} disabled={loading||!email.trim()}
+                  style={{width:"100%",padding:"11px",borderRadius:8,background:T.ac,color:"#080808",fontSize:13,fontWeight:700,opacity:loading||!email.trim()?0.5:1}}>
+                  {loading ? "Envoi…" : "Envoyer le lien magique"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        <p style={{fontSize:10,color:T.mt,textAlign:"center",marginTop:20,lineHeight:1.5}}>
+          En continuant, tu acceptes nos conditions d'utilisation.<br/>Aucun mot de passe requis.
+        </p>
+      </div>
+    </div>
+  );
+};
 
 // ━━━ ONBOARDING ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const ONBOARD_CAREER_IDS = ["fullstack","uxdesign","entrepreneur","dataanalyst","cybersecurite","infirmier","commercial","devops","datascientist","kine"];
@@ -1372,7 +1526,7 @@ const DailyPage = () => {
 
 // ━━━ SETTINGS PAGE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const SettingsPage = () => {
-  const {nav,userName,setUserName,setOnboardingDone,notify,pillars,setPillars} = useCtx();
+  const {nav,userName,setUserName,setOnboardingDone,notify,pillars,setPillars,user,signOut} = useCtx();
   const [nameEdit, setNameEdit] = useState(userName);
   const [resetPending, setResetPending] = useState(false);
   const [immersive, setImmersive] = useState(()=>{try{return JSON.parse(localStorage.getItem("lp_immersive")||"false")}catch{return false}});
@@ -1481,6 +1635,18 @@ const SettingsPage = () => {
             Sauvegarder les piliers
           </button>
         </div>
+
+        {/* Compte */}
+        {user && (
+          <div style={{background:T.sf,border:`1px solid ${T.bd}`,borderRadius:14,padding:"14px 16px",marginBottom:12}}>
+            <p style={{fontSize:9,color:T.mt,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:10}}>COMPTE</p>
+            {row("Email", <span style={{fontSize:12,color:T.mt,maxWidth:180,textOverflow:"ellipsis",overflow:"hidden",whiteSpace:"nowrap"}}>{user.email}</span>)}
+            <button className="btn" onClick={signOut}
+              style={{width:"100%",marginTop:12,padding:"11px",borderRadius:10,border:`1px solid ${T.bd}`,background:"transparent",color:T.mt,fontSize:12,fontWeight:700}}>
+              Se déconnecter
+            </button>
+          </div>
+        )}
 
         {/* Danger zone */}
         <div style={{background:T.sf,border:`1px solid ${T.rd}22`,borderRadius:14,padding:"14px 16px",marginBottom:12}}>

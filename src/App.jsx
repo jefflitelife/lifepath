@@ -567,6 +567,15 @@ export default function LifePath() {
   }, []);
 
   useEffect(() => {
+    // PKCE: exchange OAuth code returned in URL after Google redirect
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).finally(() => {
+        window.history.replaceState({}, '', window.location.pathname);
+      });
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       const u = session?.user ?? null;
       setUser(u);
